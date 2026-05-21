@@ -8,6 +8,7 @@ import '../../models/model_verify_config.dart';
 import '../../widgets/detection_overlay.dart';
 import '../../widgets/detection_preview.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
+import '../../widgets/task_controls.dart';
 import '../../widgets/window_detection_preview.dart';
 
 class ModelVerifyView extends GetView<ModelVerifyController> {
@@ -48,119 +49,131 @@ class _SettingsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Obx(
-        () => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('验证模式', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            SegmentedButton<ModelVerifyMode>(
-              segments: const [
-                ButtonSegment(value: ModelVerifyMode.image, label: Text('图片')),
-                ButtonSegment(value: ModelVerifyMode.window, label: Text('窗口')),
-              ],
-              selected: {controller.mode.value},
-              onSelectionChanged: controller.isRunning.value
-                  ? null
-                  : (values) => controller.setMode(values.first),
-            ),
-            const SizedBox(height: 20),
-            _PathField(
-              label: 'ONNX 模型',
-              value: controller.modelPath.value,
-              onPick: controller.pickModel,
-            ),
-            const SizedBox(height: 12),
-            if (controller.mode.value == ModelVerifyMode.window)
-              _WindowPicker(controller: controller)
-            else ...[
+    return Obx(
+      () => TaskSettingsPanel(
+        children: [
+          TaskSettingsSection(
+            title: '验证模式',
+            children: [
+              SegmentedButton<ModelVerifyMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ModelVerifyMode.image,
+                    label: Text('图片'),
+                  ),
+                  ButtonSegment(
+                    value: ModelVerifyMode.window,
+                    label: Text('窗口'),
+                  ),
+                ],
+                selected: {controller.mode.value},
+                onSelectionChanged: controller.isRunning.value
+                    ? null
+                    : (values) => controller.setMode(values.first),
+              ),
               _PathField(
-                label: '图片文件',
-                value: controller.sourcePath.value,
-                onPick: controller.pickSource,
+                label: 'ONNX 模型',
+                value: controller.modelPath.value,
+                enabled: !controller.isRunning.value,
+                onPick: controller.pickModel,
+              ),
+              if (controller.mode.value == ModelVerifyMode.window)
+                _WindowPicker(controller: controller)
+              else
+                _PathField(
+                  label: '图片文件',
+                  value: controller.sourcePath.value,
+                  enabled: !controller.isRunning.value,
+                  onPick: controller.pickSource,
+                ),
+            ],
+          ),
+          TaskSettingsSection(
+            title: '推理参数',
+            description: '图片和窗口验证共用这组阈值，运行中保持锁定。',
+            children: [
+              TextFormField(
+                enabled: !controller.isRunning.value,
+                initialValue: controller.imgsz.value.toString(),
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'imgsz',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: controller.setImgsz,
+              ),
+              TextFormField(
+                enabled: !controller.isRunning.value,
+                initialValue: controller.conf.value.toString(),
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'conf',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: controller.setConf,
+              ),
+              TextFormField(
+                enabled: !controller.isRunning.value,
+                initialValue: controller.iou.value.toString(),
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'iou',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: controller.setIou,
+              ),
+              _ClassCountField(
+                enabled: !controller.isRunning.value,
+                value: controller.classCount.value,
+                onChanged: controller.setClassCount,
               ),
             ],
-            const SizedBox(height: 20),
-            TextFormField(
-              enabled: !controller.isRunning.value,
-              initialValue: controller.imgsz.value.toString(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'imgsz',
-                border: OutlineInputBorder(),
+          ),
+          TaskActionArea(
+            children: [
+              FilledButton.icon(
+                onPressed: controller.isRunning.value
+                    ? null
+                    : () => unawaited(controller.runVerify()),
+                icon: controller.isRunning.value
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.play_arrow),
+                label: Text(controller.isRunning.value ? '验证中...' : '开始验证'),
               ),
-              onChanged: controller.setImgsz,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              enabled: !controller.isRunning.value,
-              initialValue: controller.conf.value.toString(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'conf',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: controller.setConf,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              enabled: !controller.isRunning.value,
-              initialValue: controller.iou.value.toString(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'iou',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: controller.setIou,
-            ),
-            const SizedBox(height: 12),
-            _ClassCountField(
-              enabled: !controller.isRunning.value,
-              value: controller.classCount.value,
-              onChanged: controller.setClassCount,
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: controller.isRunning.value
-                  ? null
-                  : () => unawaited(controller.runVerify()),
-              icon: controller.isRunning.value
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.play_arrow),
-              label: Text(controller.isRunning.value ? '验证中...' : '开始验证'),
-            ),
-            if (controller.isRunning.value) ...[
-              const SizedBox(height: 12),
-              LinearProgressIndicator(
-                value: controller.totalFrames.value > 0
-                    ? controller.processedFrames.value /
-                          controller.totalFrames.value
-                    : null,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                controller.verifyStage.value.isEmpty
-                    ? '模型验证运行中...'
-                    : controller.verifyStage.value,
-              ),
-              if (controller.totalFrames.value > 0)
-                Text(
-                  '处理帧 ${controller.processedFrames.value}/${controller.totalFrames.value}',
+              if (controller.isRunning.value)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    LinearProgressIndicator(
+                      value: controller.totalFrames.value > 0
+                          ? controller.processedFrames.value /
+                                controller.totalFrames.value
+                          : null,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      controller.verifyStage.value.isEmpty
+                          ? '模型验证运行中...'
+                          : controller.verifyStage.value,
+                    ),
+                    if (controller.totalFrames.value > 0)
+                      Text(
+                        '处理帧 ${controller.processedFrames.value}/${controller.totalFrames.value}',
+                      ),
+                    if (controller.currentFramePath.value.isNotEmpty)
+                      Text(
+                        controller.currentFramePath.value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
                 ),
-              if (controller.currentFramePath.value.isNotEmpty)
-                Text(
-                  controller.currentFramePath.value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              if (controller.mode.value == ModelVerifyMode.window) ...[
-                const SizedBox(height: 8),
+              if (controller.isRunning.value &&
+                  controller.mode.value == ModelVerifyMode.window)
                 OutlinedButton.icon(
                   onPressed: controller.isStopping.value
                       ? null
@@ -168,13 +181,11 @@ class _SettingsPanel extends StatelessWidget {
                   icon: const Icon(Icons.stop_circle_outlined),
                   label: Text(controller.isStopping.value ? '停止中...' : '停止验证'),
                 ),
-              ],
+              if (controller.mode.value == ModelVerifyMode.window)
+                const Text('窗口验证默认限制为 5 FPS，避免推理占满 CPU/GPU。'),
             ],
-            const SizedBox(height: 12),
-            if (controller.mode.value == ModelVerifyMode.window)
-              const Text('窗口验证默认限制为 5 FPS，避免推理占满 CPU/GPU。'),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -391,29 +402,21 @@ class _PathField extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onPick,
+    this.enabled = true,
   });
 
   final String label;
   final String value;
   final Future<void> Function() onPick;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: InputDecorator(
-            decoration: InputDecoration(
-              labelText: label,
-              border: const OutlineInputBorder(),
-            ),
-            child: SelectableText(value.isEmpty ? '未选择' : value, maxLines: 1),
-          ),
-        ),
-        const SizedBox(width: 8),
-        OutlinedButton(onPressed: onPick, child: const Text('选择')),
-      ],
+    return TaskPathField(
+      label: label,
+      value: value,
+      enabled: enabled,
+      onPick: onPick,
     );
   }
 }

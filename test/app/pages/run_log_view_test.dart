@@ -27,7 +27,7 @@ void main() {
     await tester.pumpWidget(buildTestApp(home: const RunLogView()));
     await tester.pump();
 
-    expect(find.text('运行日志'), findsOneWidget);
+    expect(find.text('错误日志'), findsOneWidget);
     expect(find.text('暂无错误日志'), findsOneWidget);
     expect(find.text('清空'), findsOneWidget);
 
@@ -55,7 +55,7 @@ void main() {
     await tester.pumpWidget(buildTestApp(home: const RunLogView()));
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('模型验证'), findsOneWidget);
+    expect(find.text('模型验证'), findsAtLeastNWidgets(1));
     expect(find.text('图片不存在'), findsOneWidget);
     expect(find.text('sourcePath 为空'), findsOneWidget);
 

@@ -10,9 +10,12 @@ import '../../controllers/app_settings_controller.dart';
 import '../../controllers/class_controller.dart';
 import '../../controllers/image_list_controller.dart';
 import '../../models/dataset_split.dart';
+import '../../routes/app_route_names.dart';
 import '../../services/image_scan_service.dart';
+import '../../theme/fluent_design_tokens.dart';
 import '../../widgets/bbox_list_panel.dart';
 import '../../widgets/class_panel.dart';
+import '../../widgets/fluent_app_shell.dart';
 import '../../widgets/image_canvas.dart';
 import '../../widgets/image_list_panel.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
@@ -53,57 +56,65 @@ class _AnnotationViewState extends State<AnnotationView> {
 
   @override
   Widget build(BuildContext context) {
-    return KeyboardListener(
-      focusNode: _focusNode,
-      autofocus: true,
-      onKeyEvent: _handleKeyEvent,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isCompact =
-              constraints.maxWidth < ResponsiveBreakpoints.annotation;
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('图片标注'),
-              actions: _buildAppBarActions(context, isCompact),
-            ),
-            drawer: isCompact
-                ? _ImageListDrawer(
-                    imageListController: _imageListController,
-                    annotationController: _annotationController,
-                  )
-                : null,
-            endDrawer: isCompact
-                ? _ToolsDrawer(
-                    classController: _classController,
-                    annotationController: _annotationController,
-                  )
-                : null,
-            body: Obx(() {
-              final hasCurrentImage =
-                  _annotationController.currentImage.value != null;
-              final isLoading = _annotationController.isLoading.value;
-              return isCompact
-                  ? _CompactBody(
-                      annotationController: _annotationController,
-                      hasCurrentImage: hasCurrentImage,
-                      isLoading: isLoading,
-                      onImport: () => unawaited(_showImportDialog(context)),
-                    )
-                  : _DesktopBody(
-                      annotationController: _annotationController,
+    return FluentAppShell(
+      showNavigation: false,
+      child: KeyboardListener(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact =
+                constraints.maxWidth < ResponsiveBreakpoints.annotation;
+            return Scaffold(
+              backgroundColor: FluentDesignTokens.appBackground,
+              appBar: PreferredSize(
+                preferredSize: const Size.fromHeight(64),
+                child: _AnnotationCommandBar(
+                  isCompact: isCompact,
+                  annotationController: _annotationController,
+                  actions: _buildAppBarActions(context, isCompact),
+                ),
+              ),
+              drawer: isCompact
+                  ? _ImageListDrawer(
                       imageListController: _imageListController,
+                      annotationController: _annotationController,
+                    )
+                  : null,
+              endDrawer: isCompact
+                  ? _ToolsDrawer(
                       classController: _classController,
-                      hasCurrentImage: hasCurrentImage,
-                      isLoading: isLoading,
-                      onImport: () => unawaited(_showImportDialog(context)),
-                    );
-            }),
-            bottomNavigationBar: _StatusBar(
-              annotationController: _annotationController,
-              imageListController: _imageListController,
-            ),
-          );
-        },
+                      annotationController: _annotationController,
+                    )
+                  : null,
+              body: Obx(() {
+                final hasCurrentImage =
+                    _annotationController.currentImage.value != null;
+                final isLoading = _annotationController.isLoading.value;
+                return isCompact
+                    ? _CompactBody(
+                        annotationController: _annotationController,
+                        hasCurrentImage: hasCurrentImage,
+                        isLoading: isLoading,
+                        onImport: () => unawaited(_showImportDialog(context)),
+                      )
+                    : _DesktopBody(
+                        annotationController: _annotationController,
+                        imageListController: _imageListController,
+                        classController: _classController,
+                        hasCurrentImage: hasCurrentImage,
+                        isLoading: isLoading,
+                        onImport: () => unawaited(_showImportDialog(context)),
+                      );
+              }),
+              bottomNavigationBar: _StatusBar(
+                annotationController: _annotationController,
+                imageListController: _imageListController,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -158,9 +169,9 @@ class _AnnotationViewState extends State<AnnotationView> {
 
     return [
       _AppBarInkBoundary(
-        child: TextButton.icon(
+        child: OutlinedButton.icon(
           onPressed: () => unawaited(_showImportDialog(context)),
-          icon: const Icon(Icons.add_photo_alternate_outlined),
+          icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
           label: const Text('导入图片'),
         ),
       ),
@@ -187,11 +198,11 @@ class _AnnotationViewState extends State<AnnotationView> {
         ),
       ),
       _AppBarInkBoundary(
-        child: TextButton.icon(
+        child: FilledButton.icon(
           onPressed: () => unawaited(
             _annotationController.saveCurrent(showSuccessToast: true),
           ),
-          icon: const Icon(Icons.save),
+          icon: const Icon(Icons.save, size: 18),
           label: const Text('保存'),
         ),
       ),
@@ -387,6 +398,102 @@ class _AnnotationViewState extends State<AnnotationView> {
   }
 }
 
+class _AnnotationCommandBar extends StatelessWidget {
+  const _AnnotationCommandBar({
+    required this.isCompact,
+    required this.annotationController,
+    required this.actions,
+  });
+
+  final bool isCompact;
+  final AnnotationController annotationController;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: FluentDesignTokens.titleBarBackground,
+        border: Border(bottom: BorderSide(color: FluentDesignTokens.border)),
+      ),
+      child: SizedBox(
+        height: 64,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              _AppBarInkBoundary(
+                child: _BackToHomeButton(isCompact: isCompact),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Obx(() {
+                  final image = annotationController.currentImage.value;
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '图片标注',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        image?.relativePath ?? '未加载图片',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: FluentDesignTokens.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+              const SizedBox(width: 12),
+              for (final action in actions) action,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BackToHomeButton extends StatelessWidget {
+  const _BackToHomeButton({required this.isCompact});
+
+  final bool isCompact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isCompact) {
+      return IconButton(
+        tooltip: '返回工作页',
+        onPressed: _returnToHome,
+        icon: const Icon(Icons.arrow_back),
+      );
+    }
+
+    return OutlinedButton.icon(
+      onPressed: _returnToHome,
+      icon: const Icon(Icons.arrow_back, size: 18),
+      label: const Text('返回工作页'),
+    );
+  }
+
+  void _returnToHome() {
+    if (Get.testMode || Get.key.currentState == null) {
+      return;
+    }
+    Get.offAllNamed(AppRouteNames.home);
+  }
+}
+
 /// 为 AppBar 操作提供独立的透明 Material，避免响应式重建后旧水波纹继续引用已卸载按钮。
 class _AppBarInkBoundary extends StatelessWidget {
   const _AppBarInkBoundary({required this.child});
@@ -421,61 +528,132 @@ class _DesktopBody extends StatefulWidget {
 }
 
 class _DesktopBodyState extends State<_DesktopBody> {
-  static const double _imageListWidth = 260;
-  static const double _toolsExpandedWidth = 320;
+  static const double _imageListWidth = 276;
+  static const double _imageListCollapsedWidth = 52;
+  static const double _toolsExpandedWidth = 300;
   static const double _toolsCollapsedWidth = 52;
+  bool _isImageListCollapsed = false;
   bool _isToolsCollapsed = false;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: _imageListWidth,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(color: Theme.of(context).dividerColor),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          SizedBox(
+            width: _isImageListCollapsed
+                ? _imageListCollapsedWidth
+                : _imageListWidth,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: FluentDesignTokens.cardBackground,
+                border: Border.all(color: FluentDesignTokens.border),
+                borderRadius: BorderRadius.circular(
+                  FluentDesignTokens.cardRadius,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(
+                  FluentDesignTokens.cardRadius,
+                ),
+                child: _isImageListCollapsed
+                    ? _CollapsedImageListPanel(
+                        onExpand: () => setState(() {
+                          _isImageListCollapsed = false;
+                        }),
+                      )
+                    : ImageListPanel(
+                        imageListController: widget.imageListController,
+                        annotationController: widget.annotationController,
+                        headerTrailing: IconButton(
+                          tooltip: '折叠左侧面板',
+                          onPressed: () => setState(() {
+                            _isImageListCollapsed = true;
+                          }),
+                          icon: const Icon(Icons.chevron_left),
+                        ),
+                      ),
               ),
             ),
-            child: ImageListPanel(
-              imageListController: widget.imageListController,
-              annotationController: widget.annotationController,
-            ),
           ),
-        ),
-        Expanded(
-          child: _CanvasArea(
-            annotationController: widget.annotationController,
-            hasCurrentImage: widget.hasCurrentImage,
-            isLoading: widget.isLoading,
-            onImport: widget.onImport,
-          ),
-        ),
-        SizedBox(
-          width: _isToolsCollapsed ? _toolsCollapsedWidth : _toolsExpandedWidth,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(color: Theme.of(context).dividerColor),
+          const SizedBox(width: 16),
+          Expanded(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: FluentDesignTokens.previewBackground,
+                border: Border.all(color: FluentDesignTokens.border),
+                borderRadius: BorderRadius.circular(
+                  FluentDesignTokens.cardRadius,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: _CanvasArea(
+                  annotationController: widget.annotationController,
+                  hasCurrentImage: widget.hasCurrentImage,
+                  isLoading: widget.isLoading,
+                  onImport: widget.onImport,
+                ),
               ),
             ),
-            child: _isToolsCollapsed
-                ? _CollapsedToolsPanel(
-                    onExpand: () => setState(() {
-                      _isToolsCollapsed = false;
-                    }),
-                  )
-                : _ExpandedToolsPanel(
-                    classController: widget.classController,
-                    annotationController: widget.annotationController,
-                    onCollapse: () => setState(() {
-                      _isToolsCollapsed = true;
-                    }),
-                  ),
           ),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: _isToolsCollapsed
+                ? _toolsCollapsedWidth
+                : _toolsExpandedWidth,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: FluentDesignTokens.cardBackground,
+                border: Border.all(color: FluentDesignTokens.border),
+                borderRadius: BorderRadius.circular(
+                  FluentDesignTokens.cardRadius,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(
+                  FluentDesignTokens.cardRadius,
+                ),
+                child: _isToolsCollapsed
+                    ? _CollapsedToolsPanel(
+                        onExpand: () => setState(() {
+                          _isToolsCollapsed = false;
+                        }),
+                      )
+                    : _ExpandedToolsPanel(
+                        classController: widget.classController,
+                        annotationController: widget.annotationController,
+                        onCollapse: () => setState(() {
+                          _isToolsCollapsed = true;
+                        }),
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CollapsedImageListPanel extends StatelessWidget {
+  const _CollapsedImageListPanel({required this.onExpand});
+
+  final VoidCallback onExpand;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: IconButton(
+          tooltip: '展开左侧面板',
+          onPressed: onExpand,
+          icon: const Icon(Icons.chevron_right),
         ),
-      ],
+      ),
     );
   }
 }
@@ -588,7 +766,13 @@ class _CanvasArea extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        ImageCanvas(controller: annotationController),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: FluentDesignTokens.canvasBackground,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: ImageCanvas(controller: annotationController),
+        ),
         if (!hasCurrentImage && !isLoading)
           _EmptyAnnotationState(onImport: onImport),
         if (isLoading) const Center(child: CircularProgressIndicator()),
@@ -761,11 +945,9 @@ class _StatusBar extends StatelessWidget {
           return Container(
             height: isCompact ? _compactHeight : _desktopHeight,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              border: Border(
-                top: BorderSide(color: Theme.of(context).dividerColor),
-              ),
+            decoration: const BoxDecoration(
+              color: FluentDesignTokens.titleBarBackground,
+              border: Border(top: BorderSide(color: FluentDesignTokens.border)),
             ),
             child: isCompact
                 ? _CompactStatusContent(imageText: imageText, details: details)

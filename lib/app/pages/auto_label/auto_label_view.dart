@@ -8,6 +8,7 @@ import '../../models/auto_label_config.dart';
 import '../../models/dataset_split.dart';
 import '../../widgets/detection_preview.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
+import '../../widgets/task_controls.dart';
 
 class AutoLabelView extends GetView<AutoLabelController> {
   const AutoLabelView({super.key});
@@ -40,174 +41,170 @@ class _AutoLabelSettings extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Obx(
-        () => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('输入输出', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            _PathField(
-              label: 'ONNX 模型',
-              value: controller.modelPath.value,
-              onPick: controller.pickModel,
-            ),
-            const SizedBox(height: 12),
-            _PathField(
-              label: '图片目录（可选择数据集根目录）',
-              value: controller.imageDir.value,
-              onPick: controller.pickImageDir,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<DatasetFolderFilter>(
-              initialValue: controller.folderFilter.value,
-              decoration: const InputDecoration(
-                labelText: '文件夹筛选',
-                border: OutlineInputBorder(),
+    return Obx(
+      () => TaskSettingsPanel(
+        children: [
+          TaskSettingsSection(
+            title: '输入输出',
+            children: [
+              _PathField(
+                label: 'ONNX 模型',
+                value: controller.modelPath.value,
+                enabled: !controller.isRunning.value,
+                onPick: controller.pickModel,
               ),
-              items: [
-                for (final filter in DatasetFolderFilter.values)
-                  DropdownMenuItem(value: filter, child: Text(filter.label)),
-              ],
-              onChanged: controller.isRunning.value
-                  ? null
-                  : (value) {
-                      if (value != null) {
-                        controller.setFolderFilter(value);
-                      }
-                    },
-            ),
-            const SizedBox(height: 12),
-            _PathField(
-              label: '标签输出目录',
-              value: controller.labelDir.value,
-              onPick: controller.pickLabelDir,
-            ),
-            const SizedBox(height: 24),
-            Text('推理参数', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            TextFormField(
-              enabled: !controller.isRunning.value,
-              initialValue: controller.imgsz.value.toString(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'imgsz',
-                border: OutlineInputBorder(),
+              _PathField(
+                label: '图片目录（可选择数据集根目录）',
+                value: controller.imageDir.value,
+                enabled: !controller.isRunning.value,
+                onPick: controller.pickImageDir,
               ),
-              onChanged: controller.setImgsz,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              enabled: !controller.isRunning.value,
-              initialValue: controller.conf.value.toString(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'conf',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: controller.setConf,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              enabled: !controller.isRunning.value,
-              initialValue: controller.iou.value.toString(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'iou',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: controller.setIou,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              enabled: false,
-              initialValue: controller.classCount.value.toString(),
-              decoration: const InputDecoration(
-                labelText: '当前类别数量（可自动补齐）',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<AutoLabelOverwriteStrategy>(
-              initialValue: controller.strategy.value,
-              decoration: const InputDecoration(
-                labelText: '覆盖策略',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final item in AutoLabelOverwriteStrategy.values)
-                  DropdownMenuItem(value: item, child: Text(item.label)),
-              ],
-              onChanged: controller.isRunning.value
-                  ? null
-                  : (value) {
-                      if (value != null) {
-                        controller.setStrategy(value);
-                      }
-                    },
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: controller.isRunning.value
-                  ? null
-                  : () => unawaited(controller.startAutoLabel()),
-              icon: controller.isRunning.value
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.auto_fix_high),
-              label: Text(controller.isRunning.value ? '预标注中...' : '开始预标注'),
-            ),
-            if (controller.isRunning.value) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: controller.isStopping.value
+              DropdownButtonFormField<DatasetFolderFilter>(
+                initialValue: controller.folderFilter.value,
+                decoration: const InputDecoration(
+                  labelText: '文件夹筛选',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  for (final filter in DatasetFolderFilter.values)
+                    DropdownMenuItem(value: filter, child: Text(filter.label)),
+                ],
+                onChanged: controller.isRunning.value
                     ? null
-                    : () => unawaited(controller.stopAutoLabel()),
-                icon: const Icon(Icons.stop_circle_outlined),
-                label: Text(controller.isStopping.value ? '停止中...' : '停止预标注'),
+                    : (value) {
+                        if (value != null) {
+                          controller.setFolderFilter(value);
+                        }
+                      },
+              ),
+              _PathField(
+                label: '标签输出目录',
+                value: controller.labelDir.value,
+                enabled: !controller.isRunning.value,
+                onPick: controller.pickLabelDir,
               ),
             ],
-            const SizedBox(height: 12),
-            if (controller.isRunning.value && controller.totalCount.value > 0)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  LinearProgressIndicator(
-                    value:
-                        controller.processedCount.value /
-                        controller.totalCount.value,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '处理中 ${controller.processedCount.value}/${controller.totalCount.value}',
-                  ),
-                  if (controller.currentImagePath.value.isNotEmpty)
-                    Text(
-                      controller.currentImagePath.value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  const SizedBox(height: 12),
+          ),
+          TaskSettingsSection(
+            title: '推理参数',
+            description: '调整输入尺寸、置信度和 NMS 阈值后再开始批量写入标签。',
+            children: [
+              TextFormField(
+                enabled: !controller.isRunning.value,
+                initialValue: controller.imgsz.value.toString(),
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'imgsz',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: controller.setImgsz,
+              ),
+              TextFormField(
+                enabled: !controller.isRunning.value,
+                initialValue: controller.conf.value.toString(),
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'conf',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: controller.setConf,
+              ),
+              TextFormField(
+                enabled: !controller.isRunning.value,
+                initialValue: controller.iou.value.toString(),
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'iou',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: controller.setIou,
+              ),
+              TextFormField(
+                enabled: false,
+                initialValue: controller.classCount.value.toString(),
+                decoration: const InputDecoration(
+                  labelText: '当前类别数量（可自动补齐）',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              DropdownButtonFormField<AutoLabelOverwriteStrategy>(
+                initialValue: controller.strategy.value,
+                decoration: const InputDecoration(
+                  labelText: '覆盖策略',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  for (final item in AutoLabelOverwriteStrategy.values)
+                    DropdownMenuItem(value: item, child: Text(item.label)),
                 ],
+                onChanged: controller.isRunning.value
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          controller.setStrategy(value);
+                        }
+                      },
               ),
-            OutlinedButton.icon(
-              onPressed: controller.imageDir.value.isEmpty
-                  ? null
-                  : () => unawaited(controller.openInAnnotation()),
-              icon: const Icon(Icons.edit_note),
-              label: const Text('进入标注页修正'),
-            ),
-            const SizedBox(height: 12),
-            if (controller.result.value != null)
-              Text(
-                '写入 ${controller.result.value!.writtenCount}，合并 ${controller.result.value!.mergedCount}，跳过 ${controller.result.value!.skippedCount}',
+            ],
+          ),
+          TaskActionArea(
+            children: [
+              FilledButton.icon(
+                onPressed: controller.isRunning.value
+                    ? null
+                    : () => unawaited(controller.startAutoLabel()),
+                icon: controller.isRunning.value
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.auto_fix_high),
+                label: Text(controller.isRunning.value ? '预标注中...' : '开始预标注'),
               ),
-          ],
-        ),
+              if (controller.isRunning.value)
+                OutlinedButton.icon(
+                  onPressed: controller.isStopping.value
+                      ? null
+                      : () => unawaited(controller.stopAutoLabel()),
+                  icon: const Icon(Icons.stop_circle_outlined),
+                  label: Text(controller.isStopping.value ? '停止中...' : '停止预标注'),
+                ),
+              if (controller.isRunning.value && controller.totalCount.value > 0)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    LinearProgressIndicator(
+                      value:
+                          controller.processedCount.value /
+                          controller.totalCount.value,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '处理中 ${controller.processedCount.value}/${controller.totalCount.value}',
+                    ),
+                    if (controller.currentImagePath.value.isNotEmpty)
+                      Text(
+                        controller.currentImagePath.value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              OutlinedButton.icon(
+                onPressed: controller.imageDir.value.isEmpty
+                    ? null
+                    : () => unawaited(controller.openInAnnotation()),
+                icon: const Icon(Icons.edit_note),
+                label: const Text('进入标注页修正'),
+              ),
+              if (controller.result.value != null)
+                Text(
+                  '写入 ${controller.result.value!.writtenCount}，合并 ${controller.result.value!.mergedCount}，跳过 ${controller.result.value!.skippedCount}',
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -217,30 +214,22 @@ class _PathField extends StatelessWidget {
   const _PathField({
     required this.label,
     required this.value,
+    required this.enabled,
     required this.onPick,
   });
 
   final String label;
   final String value;
+  final bool enabled;
   final Future<void> Function() onPick;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: InputDecorator(
-            decoration: InputDecoration(
-              labelText: label,
-              border: const OutlineInputBorder(),
-            ),
-            child: SelectableText(value.isEmpty ? '未选择' : value, maxLines: 1),
-          ),
-        ),
-        const SizedBox(width: 8),
-        OutlinedButton(onPressed: onPick, child: const Text('选择')),
-      ],
+    return TaskPathField(
+      label: label,
+      value: value,
+      enabled: enabled,
+      onPick: onPick,
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:flutter_label/app/models/image_annotation_status.dart';
 import 'package:flutter_label/app/models/image_item.dart';
 import 'package:flutter_label/app/pages/annotation/annotation_view.dart';
 import 'package:flutter_label/app/services/image_index_service.dart';
+import 'package:flutter_label/app/theme/fluent_design_tokens.dart';
 import 'package:flutter_label/app/widgets/image_canvas.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -39,7 +40,9 @@ void main() {
     await tester.pumpWidget(buildTestApp(home: const AnnotationView()));
     await tester.pumpAndSettle();
 
-    expect(find.text('图片标注'), findsOneWidget);
+    expect(find.text('图片标注'), findsAtLeastNWidgets(1));
+    expect(find.text('工作台'), findsNothing);
+    expect(find.text('返回工作页'), findsOneWidget);
     expect(find.text('导入图片'), findsWidgets);
     expect(find.text('当前数据集还没有图片'), findsOneWidget);
     expect(find.text('导入图片'), findsWidgets);
@@ -80,7 +83,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('图片标注'), findsOneWidget);
+    expect(find.text('图片标注'), findsAtLeastNWidgets(1));
   });
 
   testWidgets('桌面右侧面板支持手动折叠与展开', (tester) async {
@@ -103,6 +106,53 @@ void main() {
 
     expect(find.byTooltip('折叠右侧面板'), findsOneWidget);
     expect(find.text('工具面板'), findsOneWidget);
+  });
+
+  testWidgets('桌面左侧图片列表支持手动折叠与展开', (tester) async {
+    setTestViewport(tester, const Size(1200, 900));
+    final imageListController = Get.find<ImageListController>();
+
+    imageListController.applyIndexUpdate(
+      const ImageIndexUpdate(
+        upserts: [
+          ImageItem(
+            path: '/dataset/images/train/current.jpg',
+            labelPath: '/dataset/labels/train/current.txt',
+            fileName: 'current.jpg',
+            relativePath: 'images/train/current.jpg',
+            width: 100,
+            height: 80,
+          ),
+        ],
+        statuses: {'images/train/current.jpg': ImageAnnotationStatus.unlabeled},
+        removedRelativePaths: [],
+        warnings: [],
+        processedCount: 1,
+        totalCount: 1,
+        isComplete: true,
+      ),
+    );
+
+    await tester.pumpWidget(buildTestApp(home: const AnnotationView()));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('折叠左侧面板'), findsOneWidget);
+    expect(find.text('图片列表（1/1）'), findsOneWidget);
+    expect(find.text('current.jpg'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('折叠左侧面板'));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('展开左侧面板'), findsOneWidget);
+    expect(find.text('图片列表（1/1）'), findsNothing);
+    expect(find.text('current.jpg'), findsNothing);
+
+    await tester.tap(find.byTooltip('展开左侧面板'));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('折叠左侧面板'), findsOneWidget);
+    expect(find.text('图片列表（1/1）'), findsOneWidget);
+    expect(find.text('current.jpg'), findsOneWidget);
   });
 
   testWidgets('画布绘制被裁剪在中间区域内', (tester) async {
@@ -220,5 +270,49 @@ void main() {
     expect(find.text('train.jpg'), findsNothing);
     expect(find.text('val.jpg'), findsOneWidget);
     expect(find.text('test.jpg'), findsNothing);
+  });
+
+  testWidgets('当前图片列表项显示选中背景色', (tester) async {
+    setTestViewport(tester, const Size(1200, 900));
+    final imageListController = Get.find<ImageListController>();
+
+    imageListController.applyIndexUpdate(
+      const ImageIndexUpdate(
+        upserts: [
+          ImageItem(
+            path: '/dataset/images/train/current.jpg',
+            labelPath: '/dataset/labels/train/current.txt',
+            fileName: 'current.jpg',
+            relativePath: 'images/train/current.jpg',
+            width: 100,
+            height: 80,
+          ),
+        ],
+        statuses: {'images/train/current.jpg': ImageAnnotationStatus.unlabeled},
+        removedRelativePaths: [],
+        warnings: [],
+        processedCount: 1,
+        totalCount: 1,
+        isComplete: true,
+      ),
+    );
+    imageListController.selectByIndex(0);
+
+    await tester.pumpWidget(buildTestApp(home: const AnnotationView()));
+    await tester.pumpAndSettle();
+
+    final tileFinder = find.ancestor(
+      of: find.text('current.jpg'),
+      matching: find.byType(ListTile),
+    );
+    final materialFinder = find.ancestor(
+      of: tileFinder,
+      matching: find.byType(Material),
+    );
+    final tile = tester.widget<ListTile>(tileFinder);
+    final material = tester.widget<Material>(materialFinder.first);
+
+    expect(tile.selected, isTrue);
+    expect(material.color, FluentDesignTokens.selectedBackground);
   });
 }

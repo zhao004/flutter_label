@@ -26,11 +26,11 @@ void main() {
 
     await tester.pumpWidget(buildTestApp(home: const AutoLabelView()));
 
-    expect(find.text('自动预标注'), findsOneWidget);
+    expect(find.text('自动预标注'), findsAtLeastNWidgets(1));
     expect(find.text('ONNX 模型'), findsOneWidget);
     expect(find.text('图片目录（可选择数据集根目录）'), findsOneWidget);
-    expect(find.text('开始预标注'), findsOneWidget);
-    expect(find.byIcon(Icons.auto_fix_high), findsOneWidget);
+    expect(find.text('开始预标注'), findsAtLeastNWidgets(1));
+    expect(find.byIcon(Icons.auto_fix_high), findsAtLeastNWidgets(1));
     expect(find.text('实时预览'), findsAtLeastNWidgets(1));
   });
 

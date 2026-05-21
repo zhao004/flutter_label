@@ -20,9 +20,10 @@ void main() {
     await tester.pumpWidget(buildTestApp(home: const SettingsView()));
     await tester.pumpAndSettle();
 
-    expect(find.text('配置'), findsOneWidget);
+    expect(find.text('配置'), findsAtLeastNWidgets(1));
     expect(find.text('应用配置'), findsOneWidget);
-    expect(find.text('标注页点击空格会标记已完成并调整下一张图片'), findsOneWidget);
+    expect(find.text('标注页快捷键'), findsOneWidget);
+    expect(find.textContaining('开启后，空格'), findsAtLeastNWidgets(1));
     expect(controller.spaceCompletesAndSelectsNext.value, isFalse);
 
     await tester.tap(find.byType(SwitchListTile));

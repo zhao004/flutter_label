@@ -19,14 +19,14 @@ void main() {
 
     await tester.pumpWidget(buildTestApp(home: const VideoExtractView()));
 
-    expect(find.text('视频抽帧'), findsOneWidget);
+    expect(find.text('视频抽帧'), findsAtLeastNWidgets(1));
     expect(find.text('视频文件'), findsOneWidget);
     expect(find.text('输出目录'), findsOneWidget);
-    expect(find.text('开始抽帧'), findsOneWidget);
+    expect(find.text('开始抽帧'), findsAtLeastNWidgets(1));
     expect(find.text('停止抽帧'), findsOneWidget);
     expect(find.text('实时预览'), findsOneWidget);
     expect(find.text('同名文件处理'), findsOneWidget);
-    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    expect(find.byIcon(Icons.play_arrow), findsAtLeastNWidgets(1));
   });
 
   testWidgets('视频抽帧页面窄屏布局不溢出', (tester) async {

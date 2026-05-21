@@ -41,6 +41,8 @@ dependencies:
   drift: ^2.33.0
   sqlite3_flutter_libs: ^0.6.0+eol
   path_provider: ^2.1.5
+  fluent_ui: ^4.15.1
+  window_manager: ^0.5.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

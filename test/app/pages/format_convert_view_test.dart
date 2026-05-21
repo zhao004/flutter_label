@@ -19,14 +19,14 @@ void main() {
 
     await tester.pumpWidget(buildTestApp(home: const FormatConvertView()));
 
-    expect(find.text('格式转换'), findsOneWidget);
+    expect(find.text('格式转换'), findsAtLeastNWidgets(1));
     expect(find.text('输入格式'), findsOneWidget);
     expect(find.text('输出格式'), findsOneWidget);
     expect(find.text('输入目录'), findsOneWidget);
     expect(find.text('输出目录'), findsOneWidget);
     expect(find.text('data.yaml'), findsOneWidget);
-    expect(find.text('开始转换'), findsOneWidget);
-    expect(find.byIcon(Icons.swap_horiz), findsOneWidget);
+    expect(find.text('开始转换'), findsAtLeastNWidgets(1));
+    expect(find.byIcon(Icons.swap_horiz), findsAtLeastNWidgets(1));
   });
 
   testWidgets('格式转换页面窄屏布局不溢出', (tester) async {

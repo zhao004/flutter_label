@@ -21,11 +21,11 @@ void main() {
 
     await tester.pumpWidget(buildTestApp(home: const ModelVerifyView()));
 
-    expect(find.text('模型验证'), findsOneWidget);
+    expect(find.text('模型验证'), findsAtLeastNWidgets(1));
     expect(find.text('ONNX 模型'), findsOneWidget);
     expect(find.text('输出目录'), findsNothing);
-    expect(find.text('开始验证'), findsOneWidget);
-    expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    expect(find.text('开始验证'), findsAtLeastNWidgets(1));
+    expect(find.byIcon(Icons.play_arrow), findsAtLeastNWidgets(1));
     expect(find.text('视频'), findsNothing);
     expect(find.text('类别数量（自动读取 data.yaml，可手动填写）'), findsOneWidget);
     expect(find.textContaining('实时预览'), findsAtLeastNWidgets(1));

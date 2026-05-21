@@ -19,7 +19,7 @@ void main() {
 
     await tester.pumpWidget(buildTestApp(home: const DatasetExportView()));
 
-    expect(find.text('数据集导出'), findsOneWidget);
+    expect(find.text('数据集导出'), findsAtLeastNWidgets(1));
     expect(find.text('项目目录'), findsOneWidget);
     expect(find.text('导出目录'), findsOneWidget);
     expect(find.text('train'), findsOneWidget);
@@ -28,8 +28,8 @@ void main() {
     expect(find.text('打乱图片顺序'), findsOneWidget);
     expect(find.text('复制空标签'), findsOneWidget);
     expect(find.text('生成 zip'), findsOneWidget);
-    expect(find.text('开始导出'), findsOneWidget);
-    expect(find.byIcon(Icons.archive_outlined), findsOneWidget);
+    expect(find.text('开始导出'), findsAtLeastNWidgets(1));
+    expect(find.byIcon(Icons.archive_outlined), findsAtLeastNWidgets(1));
   });
 
   testWidgets('数据集导出页面窄屏布局不溢出', (tester) async {

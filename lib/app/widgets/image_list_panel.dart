@@ -5,22 +5,26 @@ import '../controllers/annotation_controller.dart';
 import '../controllers/image_list_controller.dart';
 import '../models/dataset_split.dart';
 import '../models/image_annotation_status.dart';
+import '../theme/fluent_design_tokens.dart';
 
 class ImageListPanel extends StatelessWidget {
   const ImageListPanel({
     required this.imageListController,
     required this.annotationController,
+    this.headerTrailing,
     super.key,
   });
 
   final ImageListController imageListController;
   final AnnotationController annotationController;
+  final Widget? headerTrailing;
 
   @override
   Widget build(BuildContext context) {
     return _ImageListPanelBody(
       imageListController: imageListController,
       annotationController: annotationController,
+      headerTrailing: headerTrailing,
     );
   }
 }
@@ -29,10 +33,12 @@ class _ImageListPanelBody extends StatefulWidget {
   const _ImageListPanelBody({
     required this.imageListController,
     required this.annotationController,
+    this.headerTrailing,
   });
 
   final ImageListController imageListController;
   final AnnotationController annotationController;
+  final Widget? headerTrailing;
 
   @override
   State<_ImageListPanelBody> createState() => _ImageListPanelBodyState();
@@ -91,9 +97,18 @@ class _ImageListPanelBodyState extends State<_ImageListPanelBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  '图片列表（${visibleImages.length}/${images.length}）',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '图片列表（${visibleImages.length}/${images.length}）',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    if (widget.headerTrailing != null) widget.headerTrailing!,
+                  ],
                 ),
                 if (progressText != null) ...[
                   const SizedBox(height: 6),
@@ -167,24 +182,35 @@ class _ImageListPanelBodyState extends State<_ImageListPanelBody> {
                 final image = visibleImages[index];
                 final rawIndex = imageListController.indexOfPath(image.path);
                 final status = imageListController.statusOf(image);
-                return ListTile(
-                  dense: true,
-                  selected: rawIndex == selectedIndex,
-                  title: Text(
-                    image.fileName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                final selected = rawIndex == selectedIndex;
+                return Material(
+                  color: selected
+                      ? FluentDesignTokens.selectedBackground
+                      : Colors.transparent,
+                  child: ListTile(
+                    dense: true,
+                    selected: selected,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        FluentDesignTokens.controlRadius,
+                      ),
+                    ),
+                    title: Text(
+                      image.fileName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${status.label} · ${image.dimensionText}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: status == ImageAnnotationStatus.completed
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : null,
+                    onTap: () =>
+                        widget.annotationController.loadImageAt(rawIndex),
                   ),
-                  subtitle: Text(
-                    '${status.label} · ${image.dimensionText}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: status == ImageAnnotationStatus.completed
-                      ? const Icon(Icons.check_circle, color: Colors.green)
-                      : null,
-                  onTap: () =>
-                      widget.annotationController.loadImageAt(rawIndex),
                 );
               },
             ),

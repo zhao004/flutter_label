@@ -2,140 +2,53 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../database/database.dart';
+import '../../theme/fluent_design_tokens.dart';
+import '../../widgets/fluent_app_shell.dart';
+import '../../widgets/fluent_card.dart';
 import 'home_controller.dart';
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
 
-  static const double _desktopBreakpoint = 900;
-  static const double _panelGap = 24;
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= _desktopBreakpoint;
-            final contentPadding = EdgeInsets.all(isDesktop ? 32 : 16);
-
-            if (isDesktop) {
-              return Padding(
-                padding: contentPadding,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+    return FluentAppShell(
+      child: ColoredBox(
+        color: FluentDesignTokens.appBackground,
+        child: ListView(
+          padding: FluentDesignTokens.pagePadding,
+          children: [
+            const FluentPageHeader(
+              title: '项目工作台',
+              description: '管理 YOLO 数据集项目；打开或新建项目后进入图片标注，其他处理工具通过左侧导航进入。',
+            ),
+            const SizedBox(height: FluentDesignTokens.pageGap),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final useTwoColumns = constraints.maxWidth >= 960;
+                if (!useTwoColumns) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _ProjectEntryCard(controller: controller),
+                      const SizedBox(height: 16),
+                      _HistoryPanel(controller: controller, shrinkWrap: true),
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(
-                      width: 420,
-                      child: _FunctionPanel(controller: controller),
+                      width: 460,
+                      child: _ProjectEntryCard(controller: controller),
                     ),
-                    const SizedBox(width: _panelGap),
+                    const SizedBox(width: 16),
                     Expanded(child: _HistoryPanel(controller: controller)),
                   ],
-                ),
-              );
-            }
-
-            return ListView(
-              padding: contentPadding,
-              children: [
-                _FunctionPanel(controller: controller),
-                const SizedBox(height: _panelGap),
-                _HistoryPanel(controller: controller, shrinkWrap: true),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-/// 首页左侧功能区，集中放置所有入口，避免业务入口散落在多个 Widget 中。
-class _FunctionPanel extends StatelessWidget {
-  const _FunctionPanel({required this.controller});
-
-  final HomeController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'YOLO 图片标注工具',
-              style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800),
+                );
+              },
             ),
-            const SizedBox(height: 12),
-            Obx(
-              () => FilledButton.icon(
-                onPressed: controller.isPicking.value
-                    ? null
-                    : controller.openDatasetProject,
-                icon: controller.isPicking.value
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.folder_open),
-                label: const Text('打开数据集项目'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Obx(
-              () => OutlinedButton.icon(
-                onPressed: controller.isPicking.value
-                    ? null
-                    : controller.createDatasetProject,
-                icon: const Icon(Icons.create_new_folder_outlined),
-                label: const Text('新建数据集项目'),
-              ),
-            ),
-            const SizedBox(height: 20),
-            _FeatureButton(
-              icon: Icons.movie_outlined,
-              label: '进入视频抽帧',
-              onPressed: controller.openVideoExtractPage,
-            ),
-            _FeatureButton(
-              icon: Icons.auto_fix_high,
-              label: '进入自动预标注',
-              onPressed: controller.openAutoLabelPage,
-            ),
-            _FeatureButton(
-              icon: Icons.analytics_outlined,
-              label: '进入模型验证',
-              onPressed: controller.openModelVerifyPage,
-            ),
-            _FeatureButton(
-              icon: Icons.swap_horiz,
-              label: '进入格式转换',
-              onPressed: controller.openFormatConvertPage,
-            ),
-            _FeatureButton(
-              icon: Icons.archive_outlined,
-              label: '进入数据集导出',
-              onPressed: controller.openDatasetExportPage,
-            ),
-            _FeatureButton(
-              icon: Icons.article_outlined,
-              label: '运行日志',
-              onPressed: controller.openRunLogPage,
-            ),
-            _FeatureButton(
-              icon: Icons.settings_outlined,
-              label: '配置',
-              onPressed: controller.openSettingsPage,
-            ),
-            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -143,31 +56,96 @@ class _FunctionPanel extends StatelessWidget {
   }
 }
 
-class _FeatureButton extends StatelessWidget {
-  const _FeatureButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
+class _ProjectEntryCard extends StatelessWidget {
+  const _ProjectEntryCard({required this.controller});
 
-  final IconData icon;
-  final String label;
-  final Future<void> Function() onPressed;
+  final HomeController controller;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon),
-        label: Text(label),
+    return FluentCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '数据集项目',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '选择包含 data.yaml 的项目根目录，读取类别并进入图片标注；也可以新建空项目目录。',
+            style: TextStyle(
+              color: FluentDesignTokens.textSecondary,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              color: FluentDesignTokens.fieldBackground,
+              border: Border.fromBorderSide(
+                BorderSide(color: FluentDesignTokens.fieldBorder),
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(6)),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                '也可以新建数据集项目，自动生成 images/labels/train/val/test 目录。',
+                style: TextStyle(
+                  color: FluentDesignTokens.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              Obx(
+                () => SizedBox(
+                  height: 38,
+                  child: FilledButton.icon(
+                    onPressed: controller.isPicking.value
+                        ? null
+                        : controller.openDatasetProject,
+                    icon: controller.isPicking.value
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.folder_open, size: 18),
+                    label: const Text('打开数据集项目'),
+                  ),
+                ),
+              ),
+              Obx(
+                () => SizedBox(
+                  height: 38,
+                  child: OutlinedButton.icon(
+                    onPressed: controller.isPicking.value
+                        ? null
+                        : controller.createDatasetProject,
+                    icon: const Icon(
+                      Icons.create_new_folder_outlined,
+                      size: 18,
+                    ),
+                    label: const Text('新建数据集项目'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-/// 首页右侧历史区，直接订阅 Drift Stream，数据库变更后自动刷新。
 class _HistoryPanel extends StatelessWidget {
   const _HistoryPanel({required this.controller, this.shrinkWrap = false});
 
@@ -176,80 +154,65 @@ class _HistoryPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 0,
-      color: colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    '历史记录',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                  ),
+    return FluentCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  '项目历史',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
-                TextButton.icon(
-                  onPressed: controller.clearHistory,
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('清空'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '自动记录最近打开的功能、数据集项目和导入入口。',
-              style: TextStyle(color: colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 20),
-            StreamBuilder<List<HistoryRecord>>(
-              stream: controller.recentHistoryStream,
-              initialData: const <HistoryRecord>[],
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return _HistoryMessage(
-                    icon: Icons.error_outline,
-                    message: '读取历史记录失败：${snapshot.error}',
-                  );
-                }
-
-                final records = snapshot.data ?? const <HistoryRecord>[];
-                if (records.isEmpty) {
-                  return const _HistoryMessage(
-                    icon: Icons.history_toggle_off,
-                    message: '暂无历史记录',
-                  );
-                }
-
-                final listView = ListView.separated(
-                  shrinkWrap: shrinkWrap,
-                  physics: shrinkWrap
-                      ? const NeverScrollableScrollPhysics()
-                      : const AlwaysScrollableScrollPhysics(),
-                  itemCount: records.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    return _HistoryTile(record: records[index]);
-                  },
+              ),
+              TextButton.icon(
+                onPressed: controller.clearHistory,
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('清空'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          StreamBuilder<List<HistoryRecord>>(
+            stream: controller.recentHistoryStream,
+            initialData: const <HistoryRecord>[],
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return _HistoryMessage(
+                  icon: Icons.error_outline,
+                  message: '读取历史记录失败：${snapshot.error}',
                 );
+              }
 
-                if (shrinkWrap) {
-                  return listView;
-                }
-                return Expanded(child: listView);
-              },
-            ),
-          ],
-        ),
+              final records = snapshot.data ?? const <HistoryRecord>[];
+              if (records.isEmpty) {
+                return const _HistoryMessage(
+                  icon: Icons.history_toggle_off,
+                  message: '暂无历史记录',
+                );
+              }
+
+              final listView = ListView.separated(
+                shrinkWrap: shrinkWrap,
+                physics: shrinkWrap
+                    ? const NeverScrollableScrollPhysics()
+                    : const AlwaysScrollableScrollPhysics(),
+                itemCount: records.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  return _HistoryTile(record: records[index]);
+                },
+              );
+
+              if (shrinkWrap) {
+                return listView;
+              }
+              return SizedBox(height: 360, child: listView);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -262,57 +225,44 @@ class _HistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final description = record.description;
-
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
+        color: FluentDesignTokens.fieldBackground,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    record.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
+            SizedBox(
+              width: 46,
+              child: Text(
+                _formatHistoryTime(record.createdAt),
+                style: const TextStyle(
+                  color: FluentDesignTokens.textSecondary,
+                  fontSize: 12,
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  _formatHistoryTime(record.createdAt),
-                  style: TextStyle(
-                    color: colorScheme.onSurfaceVariant,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Chip(
-                  visualDensity: VisualDensity.compact,
-                  label: Text(record.actionType.label),
-                ),
-                if (description != null)
-                  Text(
-                    description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
-                  ),
-              ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                description == null || description.isEmpty
+                    ? record.title
+                    : '${record.title} · $description',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              record.actionType.label,
+              style: const TextStyle(
+                color: FluentDesignTokens.textSecondary,
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -329,16 +279,17 @@ class _HistoryMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 40, color: colorScheme.onSurfaceVariant),
+          Icon(icon, size: 40, color: FluentDesignTokens.textSecondary),
           const SizedBox(height: 12),
-          Text(message, style: TextStyle(color: colorScheme.onSurfaceVariant)),
+          Text(
+            message,
+            style: const TextStyle(color: FluentDesignTokens.textSecondary),
+          ),
         ],
       ),
     );
@@ -347,9 +298,7 @@ class _HistoryMessage extends StatelessWidget {
 
 String _formatHistoryTime(DateTime dateTime) {
   final local = dateTime.toLocal();
-  final month = local.month.toString().padLeft(2, '0');
-  final day = local.day.toString().padLeft(2, '0');
   final hour = local.hour.toString().padLeft(2, '0');
   final minute = local.minute.toString().padLeft(2, '0');
-  return '$month-$day $hour:$minute';
+  return '$hour:$minute';
 }

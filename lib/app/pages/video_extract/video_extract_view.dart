@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import '../../controllers/video_extract_controller.dart';
 import '../../models/video_extract_config.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
+import '../../widgets/task_controls.dart';
 
 class VideoExtractView extends GetView<VideoExtractController> {
   const VideoExtractView({super.key});
@@ -39,140 +40,143 @@ class _SettingsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Obx(
-        () => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('输入输出', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            _PathField(
-              label: '视频文件',
-              value: controller.videoPath.value,
-              onPick: controller.pickVideo,
-            ),
-            const SizedBox(height: 12),
-            _PathField(
-              label: '输出目录',
-              value: controller.outputDir.value,
-              onPick: controller.pickOutputDir,
-            ),
-            const SizedBox(height: 24),
-            Text('抽帧模式', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            SegmentedButton<VideoExtractMode>(
-              segments: const [
-                ButtonSegment(
-                  value: VideoExtractMode.fps,
-                  label: Text('每秒 N 张'),
-                  icon: Icon(Icons.speed),
-                ),
-                ButtonSegment(
-                  value: VideoExtractMode.interval,
-                  label: Text('每 N 帧'),
-                  icon: Icon(Icons.filter_frames),
-                ),
-              ],
-              selected: {controller.mode.value},
-              onSelectionChanged: controller.isRunning.value
-                  ? null
-                  : (values) => controller.setMode(values.first),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              enabled:
-                  !controller.isRunning.value &&
-                  controller.mode.value == VideoExtractMode.fps,
-              keyboardType: TextInputType.number,
-              initialValue: controller.fps.value.toString(),
-              decoration: const InputDecoration(
-                labelText: 'fps',
-                helperText: '推荐普通游戏视频 3~5，动作快 8~10',
-                border: OutlineInputBorder(),
+    return Obx(
+      () => TaskSettingsPanel(
+        children: [
+          TaskSettingsSection(
+            title: '输入输出',
+            children: [
+              _PathField(
+                label: '视频文件',
+                value: controller.videoPath.value,
+                enabled: !controller.isRunning.value,
+                onPick: controller.pickVideo,
               ),
-              onChanged: controller.setFps,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              enabled:
-                  !controller.isRunning.value &&
-                  controller.mode.value == VideoExtractMode.interval,
-              keyboardType: TextInputType.number,
-              initialValue: controller.frameInterval.value.toString(),
-              decoration: const InputDecoration(
-                labelText: '帧间隔',
-                border: OutlineInputBorder(),
+              _PathField(
+                label: '输出目录',
+                value: controller.outputDir.value,
+                enabled: !controller.isRunning.value,
+                onPick: controller.pickOutputDir,
               ),
-              onChanged: controller.setFrameInterval,
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<VideoExtractConflictStrategy>(
-              initialValue: controller.conflictStrategy.value,
-              decoration: const InputDecoration(
-                labelText: '同名文件处理',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final item in VideoExtractConflictStrategy.values)
-                  DropdownMenuItem(value: item, child: Text(item.label)),
-              ],
-              onChanged: controller.isRunning.value
-                  ? null
-                  : (value) {
-                      if (value != null) {
-                        controller.setConflictStrategy(value);
-                      }
-                    },
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: controller.isRunning.value
-                        ? null
-                        : () => unawaited(controller.startExtract()),
-                    icon: controller.isRunning.value
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.play_arrow),
-                    label: Text(controller.isRunning.value ? '抽帧中...' : '开始抽帧'),
+            ],
+          ),
+          TaskSettingsSection(
+            title: '抽帧模式',
+            description: '根据视频内容选择固定帧率或固定间隔抽帧。',
+            children: [
+              SegmentedButton<VideoExtractMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: VideoExtractMode.fps,
+                    label: Text('每秒 N 张'),
+                    icon: Icon(Icons.speed),
                   ),
+                  ButtonSegment(
+                    value: VideoExtractMode.interval,
+                    label: Text('每 N 帧'),
+                    icon: Icon(Icons.filter_frames),
+                  ),
+                ],
+                selected: {controller.mode.value},
+                onSelectionChanged: controller.isRunning.value
+                    ? null
+                    : (values) => controller.setMode(values.first),
+              ),
+              TextFormField(
+                enabled:
+                    !controller.isRunning.value &&
+                    controller.mode.value == VideoExtractMode.fps,
+                keyboardType: TextInputType.number,
+                initialValue: controller.fps.value.toString(),
+                decoration: const InputDecoration(
+                  labelText: 'fps',
+                  helperText: '推荐普通游戏视频 3~5，动作快 8~10',
+                  border: OutlineInputBorder(),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed:
-                        controller.isRunning.value &&
-                            !controller.isCancelRequested.value
-                        ? controller.stopExtract
-                        : null,
-                    icon: const Icon(Icons.stop_circle_outlined),
-                    label: Text(
-                      controller.isCancelRequested.value ? '停止中...' : '停止抽帧',
+                onChanged: controller.setFps,
+              ),
+              TextFormField(
+                enabled:
+                    !controller.isRunning.value &&
+                    controller.mode.value == VideoExtractMode.interval,
+                keyboardType: TextInputType.number,
+                initialValue: controller.frameInterval.value.toString(),
+                decoration: const InputDecoration(
+                  labelText: '帧间隔',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: controller.setFrameInterval,
+              ),
+              DropdownButtonFormField<VideoExtractConflictStrategy>(
+                initialValue: controller.conflictStrategy.value,
+                decoration: const InputDecoration(
+                  labelText: '同名文件处理',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  for (final item in VideoExtractConflictStrategy.values)
+                    DropdownMenuItem(value: item, child: Text(item.label)),
+                ],
+                onChanged: controller.isRunning.value
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          controller.setConflictStrategy(value);
+                        }
+                      },
+              ),
+            ],
+          ),
+          TaskActionArea(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: controller.isRunning.value
+                          ? null
+                          : () => unawaited(controller.startExtract()),
+                      icon: controller.isRunning.value
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.play_arrow),
+                      label: Text(
+                        controller.isRunning.value ? '抽帧中...' : '开始抽帧',
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: controller.generatedImages.isEmpty
-                  ? null
-                  : () => unawaited(controller.openOutputInAnnotation()),
-              icon: const Icon(Icons.drive_folder_upload),
-              label: const Text('导入输出目录到标注页'),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '${controller.statusMessage.value}；已生成 ${controller.generatedImages.length} 张图片',
-            ),
-          ],
-        ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed:
+                          controller.isRunning.value &&
+                              !controller.isCancelRequested.value
+                          ? controller.stopExtract
+                          : null,
+                      icon: const Icon(Icons.stop_circle_outlined),
+                      label: Text(
+                        controller.isCancelRequested.value ? '停止中...' : '停止抽帧',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              OutlinedButton.icon(
+                onPressed: controller.generatedImages.isEmpty
+                    ? null
+                    : () => unawaited(controller.openOutputInAnnotation()),
+                icon: const Icon(Icons.drive_folder_upload),
+                label: const Text('导入输出目录到标注页'),
+              ),
+              Text(
+                '${controller.statusMessage.value}；已生成 ${controller.generatedImages.length} 张图片',
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -182,30 +186,22 @@ class _PathField extends StatelessWidget {
   const _PathField({
     required this.label,
     required this.value,
+    required this.enabled,
     required this.onPick,
   });
 
   final String label;
   final String value;
+  final bool enabled;
   final Future<void> Function() onPick;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: InputDecorator(
-            decoration: InputDecoration(
-              labelText: label,
-              border: const OutlineInputBorder(),
-            ),
-            child: SelectableText(value.isEmpty ? '未选择' : value, maxLines: 1),
-          ),
-        ),
-        const SizedBox(width: 8),
-        OutlinedButton(onPressed: onPick, child: const Text('选择')),
-      ],
+    return TaskPathField(
+      label: label,
+      value: value,
+      enabled: enabled,
+      onPick: onPick,
     );
   }
 }
