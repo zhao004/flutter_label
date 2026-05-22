@@ -7,6 +7,29 @@ import '../models/format_convert_config.dart';
 import '../utils/image_utils.dart';
 import 'data_yaml_service.dart';
 
+typedef FormatConvertCancelChecker = bool Function();
+
+class FormatConvertCancelledException implements Exception {
+  const FormatConvertCancelledException();
+
+  @override
+  String toString() => '格式转换已停止';
+}
+
+void _throwIfFormatConvertCancelled(FormatConvertCancelChecker? isCancelled) {
+  if (isCancelled?.call() ?? false) {
+    throw const FormatConvertCancelledException();
+  }
+}
+
+Future<void> _yieldForFormatConvertCancellation(
+  FormatConvertCancelChecker? isCancelled,
+) async {
+  _throwIfFormatConvertCancelled(isCancelled);
+  await Future<void>.delayed(Duration.zero);
+  _throwIfFormatConvertCancelled(isCancelled);
+}
+
 class _BoxRecord {
   const _BoxRecord({
     required this.classId,
@@ -32,29 +55,38 @@ class FormatConvertService {
 
   final DataYamlService _dataYamlService;
 
-  Future<FormatConvertResult> convert(FormatConvertConfig config) async {
+  Future<FormatConvertResult> convert(
+    FormatConvertConfig config, {
+    FormatConvertCancelChecker? isCancelled,
+  }) async {
     _validateConfig(config);
     if (config.inputFormat == config.outputFormat) {
       throw const FormatException('输入格式和输出格式不能相同');
     }
 
+    _throwIfFormatConvertCancelled(isCancelled);
     final classes = await _readClasses(config.dataYamlPath);
+    _throwIfFormatConvertCancelled(isCancelled);
     return switch ((config.inputFormat, config.outputFormat)) {
       (AnnotationFormat.yolo, AnnotationFormat.coco) => _yoloToCoco(
         config,
         classes,
+        isCancelled,
       ),
       (AnnotationFormat.yolo, AnnotationFormat.voc) => _yoloToVoc(
         config,
         classes,
+        isCancelled,
       ),
       (AnnotationFormat.coco, AnnotationFormat.yolo) => _cocoToYolo(
         config,
         classes,
+        isCancelled,
       ),
       (AnnotationFormat.voc, AnnotationFormat.yolo) => _vocToYolo(
         config,
         classes,
+        isCancelled,
       ),
       _ => throw const FormatException('暂不支持该格式转换'),
     };
@@ -63,11 +95,13 @@ class FormatConvertService {
   Future<FormatConvertResult> _yoloToCoco(
     FormatConvertConfig config,
     List<String> classes,
+    FormatConvertCancelChecker? isCancelled,
   ) async {
     final logs = <String>[];
     final imagesDir = Directory(p.join(config.inputDir, 'images'));
     final labelsDir = Directory(p.join(config.inputDir, 'labels'));
-    final imageFiles = await _listImages(imagesDir.path);
+    final imageFiles = await _listImages(imagesDir.path, isCancelled);
+    _throwIfFormatConvertCancelled(isCancelled);
     await Directory(config.outputDir).create(recursive: true);
 
     final cocoImages = <Map<String, Object>>[];
@@ -76,6 +110,7 @@ class FormatConvertService {
     var skipped = 0;
 
     for (var imageIndex = 0; imageIndex < imageFiles.length; imageIndex++) {
+      await _yieldForFormatConvertCancellation(isCancelled);
       final image = imageFiles[imageIndex];
       final size = await ImageUtils.readImageSize(image);
       final imageId = imageIndex + 1;
@@ -96,6 +131,7 @@ class FormatConvertService {
         imageHeight: size.height,
         classCount: classes.length,
         logs: logs,
+        isCancelled: isCancelled,
       );
       for (final box in boxes) {
         annotations.add({
@@ -117,6 +153,7 @@ class FormatConvertService {
         {'id': index, 'name': classes[index], 'supercategory': 'object'},
     ];
     final outputFile = File(p.join(config.outputDir, 'annotations.json'));
+    _throwIfFormatConvertCancelled(isCancelled);
     await outputFile.writeAsString(
       const JsonEncoder.withIndent('  ').convert({
         'images': cocoImages,
@@ -135,6 +172,7 @@ class FormatConvertService {
   Future<FormatConvertResult> _yoloToVoc(
     FormatConvertConfig config,
     List<String> classes,
+    FormatConvertCancelChecker? isCancelled,
   ) async {
     final logs = <String>[];
     final imagesDir = Directory(p.join(config.inputDir, 'images'));
@@ -144,9 +182,10 @@ class FormatConvertService {
     await annotationsDir.create(recursive: true);
     await jpegImagesDir.create(recursive: true);
 
-    final imageFiles = await _listImages(imagesDir.path);
+    final imageFiles = await _listImages(imagesDir.path, isCancelled);
     var skipped = 0;
     for (final image in imageFiles) {
+      await _yieldForFormatConvertCancellation(isCancelled);
       final size = await ImageUtils.readImageSize(image);
       final relativePath = _relativePathFrom(image, imagesDir);
       final labelFile = File(
@@ -158,6 +197,7 @@ class FormatConvertService {
         imageHeight: size.height,
         classCount: classes.length,
         logs: logs,
+        isCancelled: isCancelled,
       );
       if (!await labelFile.exists()) {
         skipped++;
@@ -166,6 +206,7 @@ class FormatConvertService {
         sourceFile: image,
         outputRoot: jpegImagesDir.path,
         relativePath: relativePath,
+        isCancelled: isCancelled,
       );
       await _writeStringPreservingRelativePath(
         outputRoot: annotationsDir.path,
@@ -176,6 +217,7 @@ class FormatConvertService {
           boxes: boxes,
           classes: classes,
         ),
+        isCancelled: isCancelled,
       );
     }
     logs.add('已生成 VOC：${config.outputDir}');
@@ -189,13 +231,17 @@ class FormatConvertService {
   Future<FormatConvertResult> _cocoToYolo(
     FormatConvertConfig config,
     List<String> classes,
+    FormatConvertCancelChecker? isCancelled,
   ) async {
     final logs = <String>[];
     final file = File(p.join(config.inputDir, 'annotations.json'));
     if (!await file.exists()) {
       throw FileSystemException('未找到 annotations.json', file.path);
     }
-    final json = jsonDecode(await file.readAsString());
+    final content = await file.readAsString();
+    _throwIfFormatConvertCancelled(isCancelled);
+    final json = jsonDecode(content);
+    _throwIfFormatConvertCancelled(isCancelled);
     if (json is! Map<String, dynamic>) {
       throw const FormatException('COCO JSON 根节点必须是对象');
     }
@@ -231,6 +277,7 @@ class FormatConvertService {
     var converted = 0;
     var skipped = 0;
     for (final image in images) {
+      await _yieldForFormatConvertCancellation(isCancelled);
       final imageId = (image['id'] as num?)?.toInt();
       final fileName = image['file_name']?.toString();
       final relativePath = fileName == null
@@ -256,10 +303,12 @@ class FormatConvertService {
           sourceFile: sourceImage,
           outputRoot: outputImagesDir.path,
           relativePath: relativePath,
+          isCancelled: isCancelled,
         );
       }
       final yoloLines = <String>[];
       for (final annotation in annotationsByImage[imageId] ?? const <Map>[]) {
+        _throwIfFormatConvertCancelled(isCancelled);
         final categoryId = (annotation['category_id'] as num?)?.toInt();
         final classId = categoryId == null
             ? null
@@ -293,6 +342,7 @@ class FormatConvertService {
         outputRoot: outputLabelsDir.path,
         relativePath: p.setExtension(relativePath, '.txt'),
         content: yoloLines.join('\n'),
+        isCancelled: isCancelled,
       );
       converted++;
     }
@@ -339,6 +389,7 @@ class FormatConvertService {
   Future<FormatConvertResult> _vocToYolo(
     FormatConvertConfig config,
     List<String> classes,
+    FormatConvertCancelChecker? isCancelled,
   ) async {
     final logs = <String>[];
     final annotationsDir = Directory(p.join(config.inputDir, 'Annotations'));
@@ -360,6 +411,7 @@ class FormatConvertService {
     var converted = 0;
     var skipped = 0;
     for (final xmlFile in xmlFiles) {
+      await _yieldForFormatConvertCancellation(isCancelled);
       final xml = await xmlFile.readAsString();
       final xmlRelativePath = _relativePathFrom(xmlFile, annotationsDir);
       final rawFileName = _xmlValue(xml, 'filename');
@@ -398,10 +450,12 @@ class FormatConvertService {
           sourceFile: sourceImage,
           outputRoot: outputImagesDir.path,
           relativePath: relativeImagePath,
+          isCancelled: isCancelled,
         );
       }
       final lines = <String>[];
       for (final objectXml in _xmlBlocks(xml, 'object')) {
+        _throwIfFormatConvertCancelled(isCancelled);
         final className = _xmlValue(objectXml, 'name');
         final classId = className == null ? -1 : classes.indexOf(className);
         final xmin = double.tryParse(_xmlValue(objectXml, 'xmin') ?? '');
@@ -441,6 +495,7 @@ class FormatConvertService {
         outputRoot: outputLabelsDir.path,
         relativePath: p.setExtension(relativeImagePath, '.txt'),
         content: lines.join('\n'),
+        isCancelled: isCancelled,
       );
       converted++;
     }
@@ -458,6 +513,7 @@ class FormatConvertService {
     required int imageHeight,
     required int classCount,
     required List<String> logs,
+    required FormatConvertCancelChecker? isCancelled,
   }) async {
     if (!await labelFile.exists()) {
       return const [];
@@ -465,6 +521,9 @@ class FormatConvertService {
     final boxes = <_BoxRecord>[];
     final lines = await labelFile.readAsLines();
     for (var index = 0; index < lines.length; index++) {
+      if (index % 32 == 0) {
+        await _yieldForFormatConvertCancellation(isCancelled);
+      }
       final parts = lines[index].trim().split(RegExp(r'\s+'));
       if (parts.length != 5) {
         logs.add('${labelFile.path}:${index + 1} 标签字段数错误，已跳过');
@@ -544,7 +603,10 @@ class FormatConvertService {
     return buffer.toString();
   }
 
-  Future<List<File>> _listImages(String imagesDir) async {
+  Future<List<File>> _listImages(
+    String imagesDir,
+    FormatConvertCancelChecker? isCancelled,
+  ) async {
     final directory = Directory(imagesDir);
     if (!await directory.exists()) {
       throw FileSystemException('图片目录不存在', imagesDir);
@@ -558,6 +620,7 @@ class FormatConvertService {
               imageExtensions.contains(p.extension(file.path).toLowerCase()),
         )
         .toList();
+    _throwIfFormatConvertCancelled(isCancelled);
     files.sort((left, right) => left.path.compareTo(right.path));
     return files;
   }
@@ -696,20 +759,26 @@ class FormatConvertService {
     required File sourceFile,
     required String outputRoot,
     required String relativePath,
+    required FormatConvertCancelChecker? isCancelled,
   }) async {
+    _throwIfFormatConvertCancelled(isCancelled);
     final outputFile = File(p.join(outputRoot, relativePath));
     await outputFile.parent.create(recursive: true);
     await sourceFile.copy(outputFile.path);
+    _throwIfFormatConvertCancelled(isCancelled);
   }
 
   Future<void> _writeStringPreservingRelativePath({
     required String outputRoot,
     required String relativePath,
     required String content,
+    required FormatConvertCancelChecker? isCancelled,
   }) async {
+    _throwIfFormatConvertCancelled(isCancelled);
     final outputFile = File(p.join(outputRoot, relativePath));
     await outputFile.parent.create(recursive: true);
     await outputFile.writeAsString(content);
+    _throwIfFormatConvertCancelled(isCancelled);
   }
 
   void _validateConfig(FormatConvertConfig config) {

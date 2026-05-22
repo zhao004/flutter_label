@@ -100,16 +100,16 @@ class _SettingsPanel extends StatelessWidget {
             children: [
               FilledButton.icon(
                 onPressed: controller.isRunning.value
-                    ? null
+                    ? (controller.isStopping.value
+                          ? null
+                          : controller.stopExport)
                     : () => unawaited(controller.startExport()),
-                icon: controller.isRunning.value
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.archive_outlined),
-                label: Text(controller.isRunning.value ? '导出中...' : '开始导出'),
+                icon: Icon(
+                  controller.isRunning.value
+                      ? Icons.stop_circle_outlined
+                      : Icons.archive_outlined,
+                ),
+                label: Text(controller.isRunning.value ? '停止' : '开始导出'),
               ),
               if (controller.result.value != null)
                 TaskResultCard(

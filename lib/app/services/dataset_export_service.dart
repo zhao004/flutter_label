@@ -9,6 +9,29 @@ import '../models/dataset_export_config.dart';
 import '../utils/image_utils.dart';
 import 'data_yaml_service.dart';
 
+typedef DatasetExportCancelChecker = bool Function();
+
+class DatasetExportCancelledException implements Exception {
+  const DatasetExportCancelledException();
+
+  @override
+  String toString() => '数据集导出已停止';
+}
+
+void _throwIfDatasetExportCancelled(DatasetExportCancelChecker? isCancelled) {
+  if (isCancelled?.call() ?? false) {
+    throw const DatasetExportCancelledException();
+  }
+}
+
+Future<void> _yieldForDatasetExportCancellation(
+  DatasetExportCancelChecker? isCancelled,
+) async {
+  _throwIfDatasetExportCancelled(isCancelled);
+  await Future<void>.delayed(Duration.zero);
+  _throwIfDatasetExportCancelled(isCancelled);
+}
+
 class _ExportItem {
   const _ExportItem({
     required this.imageFile,
@@ -46,8 +69,12 @@ class DatasetExportService {
 
   final DataYamlService _dataYamlService;
 
-  Future<DatasetExportResult> export(DatasetExportConfig config) async {
+  Future<DatasetExportResult> export(
+    DatasetExportConfig config, {
+    DatasetExportCancelChecker? isCancelled,
+  }) async {
     _validateConfig(config);
+    _throwIfDatasetExportCancelled(isCancelled);
     final logs = <String>[];
     final projectDir = Directory(config.projectDir);
     final outputDir = Directory(config.outputDir);
@@ -66,12 +93,15 @@ class DatasetExportService {
     }
 
     final classes = await _readClasses(dataYamlFile.path);
+    _throwIfDatasetExportCancelled(isCancelled);
     final scan = await _collectItems(
       imagesDir: imagesDir,
       labelsDir: labelsDir,
       includeEmptyLabels: config.includeEmptyLabels,
       logs: logs,
+      isCancelled: isCancelled,
     );
+    _throwIfDatasetExportCancelled(isCancelled);
     final items = scan.items;
     if (items.isEmpty) {
       throw const FormatException('没有可导出的图片，请检查标签和空标签选项');
@@ -99,18 +129,22 @@ class DatasetExportService {
         await workingDir.delete(recursive: true);
       }
       await workingDir.create(recursive: true);
-      await _copySplit(workingDir, split.train, 'train', logs);
-      await _copySplit(workingDir, split.val, 'val', logs);
-      await _copySplit(workingDir, split.test, 'test', logs);
+      await _copySplit(workingDir, split.train, 'train', logs, isCancelled);
+      await _copySplit(workingDir, split.val, 'val', logs, isCancelled);
+      await _copySplit(workingDir, split.test, 'test', logs, isCancelled);
+      _throwIfDatasetExportCancelled(isCancelled);
       await _writeDataYaml(workingDir, classes);
 
       if (config.createZip) {
+        _throwIfDatasetExportCancelled(isCancelled);
         await _StoredZipWriter().writeDirectory(
           sourceDir: workingDir,
           outputFile: tempZipFile,
+          isCancelled: isCancelled,
         );
       }
 
+      _throwIfDatasetExportCancelled(isCancelled);
       await _replaceDirectory(sourceDir: workingDir, targetDir: outputDir);
       if (config.createZip) {
         await _replaceFile(sourceFile: tempZipFile, targetFile: File(zipPath!));
@@ -145,6 +179,7 @@ class DatasetExportService {
     required Directory labelsDir,
     required bool includeEmptyLabels,
     required List<String> logs,
+    required DatasetExportCancelChecker? isCancelled,
   }) async {
     final files = await imagesDir
         .list(recursive: true, followLinks: false)
@@ -163,6 +198,7 @@ class DatasetExportService {
     var emptyLabels = 0;
     var duplicates = 0;
     for (final imageFile in files) {
+      await _yieldForDatasetExportCancellation(isCancelled);
       final relativeImagePath = p.relative(
         imageFile.path,
         from: imagesDir.path,
@@ -178,7 +214,8 @@ class DatasetExportService {
         continue;
       }
 
-      final hash = await _fingerprint(imageFile);
+      final hash = await _fingerprint(imageFile, isCancelled);
+      _throwIfDatasetExportCancelled(isCancelled);
       final existing = seenHashes[hash];
       if (existing != null) {
         duplicates++;
@@ -274,8 +311,10 @@ class DatasetExportService {
     List<_ExportItem> items,
     String split,
     List<String> logs,
+    DatasetExportCancelChecker? isCancelled,
   ) async {
     for (final item in items) {
+      await _yieldForDatasetExportCancellation(isCancelled);
       final imageOutput = File(
         p.join(outputDir.path, 'images', split, item.relativeImagePath),
       );
@@ -316,15 +355,20 @@ class DatasetExportService {
     return classes;
   }
 
-  Future<String> _fingerprint(File file) async {
+  Future<String> _fingerprint(
+    File file,
+    DatasetExportCancelChecker? isCancelled,
+  ) async {
     var hash = 0xcbf29ce484222325;
     var length = 0;
     await for (final chunk in file.openRead()) {
+      _throwIfDatasetExportCancelled(isCancelled);
       length += chunk.length;
       for (final byte in chunk) {
         hash ^= byte;
         hash = (hash * 0x100000001b3) & 0x7fffffffffffffff;
       }
+      await _yieldForDatasetExportCancellation(isCancelled);
     }
     return '$length:$hash';
   }
@@ -461,6 +505,13 @@ class _ZipEntry {
   final int localHeaderOffset;
 }
 
+class _ZipFileScan {
+  const _ZipFileScan({required this.crc32, required this.size});
+
+  final int crc32;
+  final int size;
+}
+
 /// 写入 ZIP 的 store 模式，避免为一个打包功能引入额外依赖。
 class _StoredZipWriter {
   static const _zipMaxEntryCount = 0xffff;
@@ -478,6 +529,7 @@ class _StoredZipWriter {
   Future<void> writeDirectory({
     required Directory sourceDir,
     required File outputFile,
+    DatasetExportCancelChecker? isCancelled,
   }) async {
     final files = await sourceDir
         .list(recursive: true, followLinks: false)
@@ -499,39 +551,35 @@ class _StoredZipWriter {
     final entries = <_ZipEntry>[];
     try {
       for (final file in files) {
+        await _yieldForDatasetExportCancellation(isCancelled);
         final relativeName = p
             .relative(file.path, from: sourceDir.path)
             .replaceAll(Platform.pathSeparator, '/');
-        final fileSize = await file.length();
-        _checkZip32(fileSize, 'ZIP 文件过大：$relativeName');
-        final bytes = await file.readAsBytes();
-        _checkZip32(bytes.length, 'ZIP 文件过大：$relativeName');
-        final crc = _crc32(bytes);
+        final scan = await _scanFile(file, isCancelled);
+        _checkZip32(scan.size, 'ZIP 文件过大：$relativeName');
         final nameBytes = utf8.encode(relativeName);
         _checkZipName(nameBytes, relativeName);
         _checkZip32(offset, 'ZIP 中央目录偏移超过传统格式上限');
-        final localHeader = _localHeader(nameBytes, crc, bytes.length);
-        _checkZip32(
-          offset + localHeader.length + bytes.length,
-          'ZIP 内容超过传统格式上限',
-        );
+        final localHeader = _localHeader(nameBytes, scan.crc32, scan.size);
+        _checkZip32(offset + localHeader.length + scan.size, 'ZIP 内容超过传统格式上限');
         sink.add(localHeader);
-        sink.add(bytes);
+        await _writeFileBytes(sink, file, isCancelled);
         entries.add(
           _ZipEntry(
             name: relativeName,
-            crc32: crc,
-            size: bytes.length,
+            crc32: scan.crc32,
+            size: scan.size,
             localHeaderOffset: offset,
           ),
         );
-        offset += localHeader.length + bytes.length;
+        offset += localHeader.length + scan.size;
       }
 
       final centralStart = offset;
       _checkZip32(centralStart, 'ZIP 中央目录偏移超过传统格式上限');
       var centralSize = 0;
       for (final entry in entries) {
+        _throwIfDatasetExportCancelled(isCancelled);
         final header = _centralHeader(entry);
         sink.add(header);
         centralSize += header.length;
@@ -546,12 +594,39 @@ class _StoredZipWriter {
     }
   }
 
-  int _crc32(Uint8List bytes) {
+  Future<_ZipFileScan> _scanFile(
+    File file,
+    DatasetExportCancelChecker? isCancelled,
+  ) async {
     var crc = 0xffffffff;
-    for (final byte in bytes) {
-      crc = _crcTable[(crc ^ byte) & 0xff] ^ (crc >> 8);
+    var size = 0;
+    await for (final chunk in file.openRead()) {
+      _throwIfDatasetExportCancelled(isCancelled);
+      size += chunk.length;
+      crc = _updateCrc32(crc, chunk);
+      await _yieldForDatasetExportCancellation(isCancelled);
     }
-    return (crc ^ 0xffffffff) & 0xffffffff;
+    return _ZipFileScan(crc32: (crc ^ 0xffffffff) & 0xffffffff, size: size);
+  }
+
+  Future<void> _writeFileBytes(
+    IOSink sink,
+    File file,
+    DatasetExportCancelChecker? isCancelled,
+  ) async {
+    await for (final chunk in file.openRead()) {
+      _throwIfDatasetExportCancelled(isCancelled);
+      sink.add(chunk);
+      await _yieldForDatasetExportCancellation(isCancelled);
+    }
+  }
+
+  int _updateCrc32(int crc, List<int> bytes) {
+    var next = crc;
+    for (final byte in bytes) {
+      next = _crcTable[(next ^ byte) & 0xff] ^ (next >> 8);
+    }
+    return next;
   }
 
   Uint8List _localHeader(List<int> nameBytes, int crc32, int size) {

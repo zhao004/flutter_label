@@ -146,6 +146,34 @@ void main() {
       expect(await oldFile.readAsString(), 'old data');
     });
 
+    test('收到停止请求时会中断导出且不写入完成目录', () async {
+      final projectDir = await _createProject(tempDir);
+      final outputDir = Directory('${tempDir.path}/cancelled_export_out');
+      var checks = 0;
+
+      await expectLater(
+        service.export(
+          DatasetExportConfig(
+            projectDir: projectDir.path,
+            outputDir: outputDir.path,
+            trainRatio: 1,
+            valRatio: 0,
+            testRatio: 0,
+            shuffle: false,
+            includeEmptyLabels: true,
+            createZip: true,
+          ),
+          isCancelled: () {
+            checks++;
+            return checks >= 4;
+          },
+        ),
+        throwsA(isA<DatasetExportCancelledException>()),
+      );
+
+      expect(outputDir.existsSync(), isFalse);
+    });
+
     test('零比例拆分不会接收余数样本', () async {
       final projectDir = await _createThreeImageProject(tempDir);
       final outputDir = Directory('${tempDir.path}/export_split');

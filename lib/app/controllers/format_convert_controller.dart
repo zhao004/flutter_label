@@ -18,9 +18,12 @@ class FormatConvertController extends GetxController {
   final outputDir = ''.obs;
   final dataYamlPath = ''.obs;
   final isRunning = false.obs;
+  final isStopping = false.obs;
   final logs = <String>[].obs;
   final errorMessage = RxnString();
   final result = Rxn<FormatConvertResult>();
+
+  bool _stopRequested = false;
 
   void setInputFormat(AnnotationFormat format) {
     inputFormat.value = format;
@@ -73,6 +76,8 @@ class FormatConvertController extends GetxController {
     }
 
     isRunning.value = true;
+    isStopping.value = false;
+    _stopRequested = false;
     errorMessage.value = null;
     result.value = null;
     logs
@@ -87,6 +92,7 @@ class FormatConvertController extends GetxController {
           outputDir: outputDir.value,
           dataYamlPath: dataYamlPath.value,
         ),
+        isCancelled: () => _stopRequested,
       );
       result.value = output;
       logs.addAll(output.logs);
@@ -95,12 +101,34 @@ class FormatConvertController extends GetxController {
         '转换完成：成功 ${output.convertedCount}，跳过 ${output.skippedCount}',
       );
     } catch (error) {
+      if (_stopRequested || error is FormatConvertCancelledException) {
+        _markConvertStopped();
+        return;
+      }
       errorMessage.value = error.toString();
       logs.add('转换失败：$error');
       AppToast.error(error, source: '格式转换');
     } finally {
       isRunning.value = false;
+      isStopping.value = false;
+      _stopRequested = false;
     }
+  }
+
+  void stopConvert() {
+    if (!isRunning.value || isStopping.value) {
+      return;
+    }
+    _stopRequested = true;
+    isStopping.value = true;
+    logs.add('正在停止格式转换...');
+  }
+
+  void _markConvertStopped() {
+    if (!logs.contains('格式转换已停止。')) {
+      logs.add('格式转换已停止。');
+    }
+    AppToast.success('已停止格式转换');
   }
 
   AnnotationFormat _firstDifferentFormat(AnnotationFormat format) {

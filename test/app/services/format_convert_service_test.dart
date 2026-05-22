@@ -83,6 +83,31 @@ void main() {
       expect(xml, contains('<ymax>7</ymax>'));
     });
 
+    test('收到停止请求时会中断格式转换且不写入完成结果', () async {
+      final inputDir = await _createYoloDataset(tempDir);
+      final outputDir = Directory('${tempDir.path}/cancelled_coco_out');
+      var checks = 0;
+
+      await expectLater(
+        service.convert(
+          FormatConvertConfig(
+            inputFormat: AnnotationFormat.yolo,
+            outputFormat: AnnotationFormat.coco,
+            inputDir: inputDir.path,
+            outputDir: outputDir.path,
+            dataYamlPath: '${inputDir.path}/data.yaml',
+          ),
+          isCancelled: () {
+            checks++;
+            return checks >= 4;
+          },
+        ),
+        throwsA(isA<FormatConvertCancelledException>()),
+      );
+
+      expect(File('${outputDir.path}/annotations.json').existsSync(), isFalse);
+    });
+
     test('YOLO 转 VOC 会保留嵌套相对路径，避免同名图片覆盖', () async {
       final inputDir = await _createNestedYoloDataset(tempDir);
       final outputDir = Directory('${tempDir.path}/nested_voc_out');

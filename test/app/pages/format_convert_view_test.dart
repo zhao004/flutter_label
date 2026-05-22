@@ -25,6 +25,7 @@ void main() {
     expect(find.text('输出目录'), findsOneWidget);
     expect(find.text('data.yaml'), findsOneWidget);
     expect(find.text('开始转换'), findsAtLeastNWidgets(1));
+    expect(find.text('停止'), findsNothing);
     expect(find.byIcon(Icons.swap_horiz), findsAtLeastNWidgets(1));
   });
 
@@ -39,8 +40,9 @@ void main() {
     expect(find.text('转换日志'), findsOneWidget);
   });
 
-  testWidgets('格式转换运行中会禁用路径选择', (tester) async {
-    Get.find<FormatConvertController>().isRunning.value = true;
+  testWidgets('格式转换运行中主按钮切换为停止并禁用路径选择', (tester) async {
+    final controller = Get.find<FormatConvertController>()
+      ..isRunning.value = true;
 
     await tester.pumpWidget(buildTestApp(home: const FormatConvertView()));
 
@@ -48,8 +50,18 @@ void main() {
       find.widgetWithText(OutlinedButton, '选择'),
     );
 
-    expect(find.text('转换中...'), findsOneWidget);
+    expect(find.text('开始转换'), findsNothing);
+    expect(find.text('停止'), findsOneWidget);
+    expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
     expect(pickButtons, hasLength(3));
     expect(pickButtons.every((button) => button.onPressed == null), isTrue);
+
+    controller.isStopping.value = true;
+    await tester.pump();
+
+    final stopButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '停止'),
+    );
+    expect(stopButton.onPressed, isNull);
   });
 }

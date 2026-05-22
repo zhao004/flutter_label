@@ -28,6 +28,7 @@ void main() {
     expect(find.text('复制空标签'), findsOneWidget);
     expect(find.text('生成 zip'), findsOneWidget);
     expect(find.text('开始导出'), findsAtLeastNWidgets(1));
+    expect(find.text('停止'), findsNothing);
     expect(find.byIcon(Icons.archive_outlined), findsAtLeastNWidgets(1));
   });
 
@@ -42,8 +43,9 @@ void main() {
     expect(find.text('导出日志'), findsOneWidget);
   });
 
-  testWidgets('数据集导出运行中会禁用路径选择和比例输入', (tester) async {
-    Get.find<DatasetExportController>().isRunning.value = true;
+  testWidgets('数据集导出运行中主按钮切换为停止并禁用输入', (tester) async {
+    final controller = Get.find<DatasetExportController>()
+      ..isRunning.value = true;
 
     await tester.pumpWidget(buildTestApp(home: const DatasetExportView()));
 
@@ -54,10 +56,20 @@ void main() {
       find.byType(TextFormField),
     );
 
-    expect(find.text('导出中...'), findsOneWidget);
+    expect(find.text('开始导出'), findsNothing);
+    expect(find.text('停止'), findsOneWidget);
+    expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
     expect(pickButtons, hasLength(2));
     expect(pickButtons.every((button) => button.onPressed == null), isTrue);
     expect(ratioFields, hasLength(3));
     expect(ratioFields.every((field) => field.enabled == false), isTrue);
+
+    controller.isStopping.value = true;
+    await tester.pump();
+
+    final stopButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '停止'),
+    );
+    expect(stopButton.onPressed, isNull);
   });
 }

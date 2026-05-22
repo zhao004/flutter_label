@@ -21,9 +21,12 @@ class DatasetExportController extends GetxController {
   final includeEmptyLabels = true.obs;
   final createZip = false.obs;
   final isRunning = false.obs;
+  final isStopping = false.obs;
   final logs = <String>[].obs;
   final errorMessage = RxnString();
   final result = Rxn<DatasetExportResult>();
+
+  bool _stopRequested = false;
 
   Future<void> pickProjectDir() async {
     final directory = await FilePicker.platform.getDirectoryPath(
@@ -55,6 +58,8 @@ class DatasetExportController extends GetxController {
     }
 
     isRunning.value = true;
+    isStopping.value = false;
+    _stopRequested = false;
     errorMessage.value = null;
     result.value = null;
     logs
@@ -72,6 +77,7 @@ class DatasetExportController extends GetxController {
           includeEmptyLabels: includeEmptyLabels.value,
           createZip: createZip.value,
         ),
+        isCancelled: () => _stopRequested,
       );
       result.value = output;
       logs.addAll(output.logs);
@@ -80,12 +86,34 @@ class DatasetExportController extends GetxController {
         '导出完成：共 ${output.exportedCount} 张，跳过 ${output.skippedCount} 张',
       );
     } catch (error) {
+      if (_stopRequested || error is DatasetExportCancelledException) {
+        _markExportStopped();
+        return;
+      }
       errorMessage.value = error.toString();
       logs.add('导出失败：$error');
       AppToast.error(error, source: '数据集导出');
     } finally {
       isRunning.value = false;
+      isStopping.value = false;
+      _stopRequested = false;
     }
+  }
+
+  void stopExport() {
+    if (!isRunning.value || isStopping.value) {
+      return;
+    }
+    _stopRequested = true;
+    isStopping.value = true;
+    logs.add('正在停止数据集导出...');
+  }
+
+  void _markExportStopped() {
+    if (!logs.contains('数据集导出已停止。')) {
+      logs.add('数据集导出已停止。');
+    }
+    AppToast.success('已停止数据集导出');
   }
 
   double _parsePercent(String value, String name) {
