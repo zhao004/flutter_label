@@ -28,16 +28,16 @@ class ModelVerifyView extends GetView<ModelVerifyController> {
           child: _SettingsPanel(controller: controller),
         ),
         ResponsiveToolPane(
-          title: '检测结果',
-          icon: Icons.list_alt_outlined,
-          child: _ResultPanel(controller: controller),
-        ),
-        ResponsiveToolPane(
           title: '实时预览',
           icon: Icons.image_outlined,
-          width: 420,
           showHeader: false,
           child: _PreviewPanel(controller: controller),
+        ),
+        ResponsiveToolPane(
+          title: '检测结果',
+          icon: Icons.list_alt_outlined,
+          width: 280,
+          child: _ResultPanel(controller: controller),
         ),
       ],
     );

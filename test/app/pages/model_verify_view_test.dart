@@ -3,6 +3,7 @@ import 'package:flutter_label/app/controllers/model_verify_controller.dart';
 import 'package:flutter_label/app/models/detection_result.dart';
 import 'package:flutter_label/app/pages/model_verify/model_verify_view.dart';
 import 'package:flutter_label/app/services/model_verify_service.dart';
+import 'package:flutter_label/app/widgets/fluent_card.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
@@ -38,9 +39,25 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('参数'), findsOneWidget);
-    expect(find.text('实时预览'), findsAtLeastNWidgets(1));
+    expect(find.text('ONNX 模型'), findsOneWidget);
+    expect(find.textContaining('实时预览'), findsAtLeastNWidgets(1));
     expect(find.text('检测结果'), findsAtLeastNWidgets(1));
+  });
+
+  testWidgets('模型验证桌面布局将预览放中间且检测结果变窄', (tester) async {
+    setTestViewport(tester, const Size(1500, 900));
+
+    await tester.pumpWidget(buildTestApp(home: const ModelVerifyView()));
+    await tester.pump();
+
+    final parameterRect = _paneCardRect(tester, find.text('ONNX 模型'));
+    final previewRect = _paneCardRect(tester, find.text('运行验证后显示实时预览'));
+    final resultRect = _paneCardRect(tester, find.text('检测结果'));
+
+    expect(parameterRect.left, lessThan(previewRect.left));
+    expect(previewRect.left, lessThan(resultRect.left));
+    expect(resultRect.width, closeTo(280, 1));
+    expect(resultRect.width, lessThan(previewRect.width));
   });
 
   testWidgets('模型验证检测结果列表同时显示类别名称和 ID', (tester) async {
@@ -71,4 +88,14 @@ void main() {
 
     expect(find.text('helmet (#2) 93.4%'), findsOneWidget);
   });
+}
+
+Rect _paneCardRect(WidgetTester tester, Finder contentFinder) {
+  expect(contentFinder, findsOneWidget);
+  final cardFinder = find.ancestor(
+    of: contentFinder,
+    matching: find.byType(FluentCard),
+  );
+  expect(cardFinder, findsWidgets);
+  return tester.getRect(cardFinder.first);
 }
