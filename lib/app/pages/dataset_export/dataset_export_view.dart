@@ -20,11 +20,13 @@ class DatasetExportView extends GetView<DatasetExportController> {
           title: '参数',
           icon: Icons.tune,
           width: 460,
+          showHeader: false,
           child: _SettingsPanel(controller: controller),
         ),
         ResponsiveToolPane(
           title: '日志',
           icon: Icons.article_outlined,
+          showHeader: false,
           child: _LogPanel(controller: controller),
         ),
       ],

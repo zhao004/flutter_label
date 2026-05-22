@@ -22,11 +22,13 @@ class AutoLabelView extends GetView<AutoLabelController> {
           title: '参数',
           icon: Icons.tune,
           width: 460,
+          showHeader: false,
           child: _AutoLabelSettings(controller: controller),
         ),
         ResponsiveToolPane(
           title: '实时预览',
           icon: Icons.image_outlined,
+          showHeader: false,
           child: _AutoLabelPreviewPanel(controller: controller),
         ),
       ],

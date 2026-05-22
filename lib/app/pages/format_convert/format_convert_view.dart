@@ -20,11 +20,13 @@ class FormatConvertView extends GetView<FormatConvertController> {
           title: '参数',
           icon: Icons.tune,
           width: 430,
+          showHeader: false,
           child: _SettingsPanel(controller: controller),
         ),
         ResponsiveToolPane(
           title: '日志',
           icon: Icons.article_outlined,
+          showHeader: false,
           child: _LogPanel(controller: controller),
         ),
       ],

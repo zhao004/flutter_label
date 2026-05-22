@@ -18,12 +18,14 @@ class ResponsiveToolPane {
     required this.child,
     this.icon,
     this.width,
+    this.showHeader = true,
   });
 
   final String title;
   final Widget child;
   final IconData? icon;
   final double? width;
+  final bool showHeader;
 }
 
 /// 将工具页统一为标题区、参数卡和预览卡布局，并让面板随窗口高度伸缩。
@@ -210,25 +212,27 @@ class _ToolPaneCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              children: [
-                if (pane.icon != null) ...[
-                  Icon(pane.icon, size: 18, color: palette.textSecondary),
-                  const SizedBox(width: 8),
-                ],
-                Text(
-                  pane.title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+          if (pane.showHeader) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  if (pane.icon != null) ...[
+                    Icon(pane.icon, size: 18, color: palette.textSecondary),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    pane.title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Divider(height: 1, color: palette.border),
+            Divider(height: 1, color: palette.border),
+          ],
           Expanded(child: pane.child),
         ],
       ),

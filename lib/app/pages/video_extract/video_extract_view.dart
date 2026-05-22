@@ -21,11 +21,13 @@ class VideoExtractView extends GetView<VideoExtractController> {
           title: '参数',
           icon: Icons.tune,
           width: 420,
+          showHeader: false,
           child: _SettingsPanel(controller: controller),
         ),
         ResponsiveToolPane(
           title: '预览',
           icon: Icons.image_outlined,
+          showHeader: false,
           child: _PreviewPanel(controller: controller),
         ),
       ],

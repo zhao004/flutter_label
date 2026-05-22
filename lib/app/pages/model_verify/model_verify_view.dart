@@ -24,6 +24,7 @@ class ModelVerifyView extends GetView<ModelVerifyController> {
           title: '参数',
           icon: Icons.tune,
           width: 430,
+          showHeader: false,
           child: _SettingsPanel(controller: controller),
         ),
         ResponsiveToolPane(
@@ -35,6 +36,7 @@ class ModelVerifyView extends GetView<ModelVerifyController> {
           title: '实时预览',
           icon: Icons.image_outlined,
           width: 420,
+          showHeader: false,
           child: _PreviewPanel(controller: controller),
         ),
       ],
