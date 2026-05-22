@@ -68,10 +68,7 @@ class AppDatabase extends _$AppDatabase {
     String? targetRoute,
     String? payload,
   }) {
-    final normalizedTitle = title.trim();
-    if (normalizedTitle.isEmpty) {
-      throw ArgumentError.value(title, 'title', '历史记录标题不能为空');
-    }
+    final normalizedTitle = _normalizeHistoryTitle(title);
 
     return into(historyRecords).insert(
       HistoryRecordsCompanion.insert(
@@ -83,6 +80,60 @@ class AppDatabase extends _$AppDatabase {
         createdAt: DateTime.now(),
       ),
     );
+  }
+
+  /// 写入或刷新同一目标的历史记录，避免首页重复展示相同项目入口。
+  Future<int> upsertHistoryRecord({
+    required HistoryActionType actionType,
+    required String title,
+    String? description,
+    String? targetRoute,
+    String? payload,
+  }) async {
+    final normalizedTitle = _normalizeHistoryTitle(title);
+    final normalizedDescription = _normalizeNullableText(description);
+    final normalizedTargetRoute = _normalizeNullableText(targetRoute);
+    final normalizedPayload = _normalizeNullableText(payload);
+    final now = DateTime.now();
+
+    final existing =
+        await (select(historyRecords)
+              ..where(
+                (record) =>
+                    record.actionType.equals(actionType.name) &
+                    _nullableTextEquals(
+                      record.targetRoute,
+                      normalizedTargetRoute,
+                    ) &
+                    _nullableTextEquals(record.payload, normalizedPayload),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+    if (existing == null) {
+      return into(historyRecords).insert(
+        HistoryRecordsCompanion.insert(
+          actionType: actionType,
+          title: normalizedTitle,
+          description: Value(normalizedDescription),
+          targetRoute: Value(normalizedTargetRoute),
+          payload: Value(normalizedPayload),
+          createdAt: now,
+        ),
+      );
+    }
+
+    await (update(
+      historyRecords,
+    )..where((record) => record.id.equals(existing.id))).write(
+      HistoryRecordsCompanion(
+        title: Value(normalizedTitle),
+        description: Value(normalizedDescription),
+        targetRoute: Value(normalizedTargetRoute),
+        payload: Value(normalizedPayload),
+        createdAt: Value(now),
+      ),
+    );
+    return existing.id;
   }
 
   Future<int> clearHistory() {
@@ -158,6 +209,24 @@ class AppDatabase extends _$AppDatabase {
       return null;
     }
     return normalized;
+  }
+
+  static String _normalizeHistoryTitle(String title) {
+    final normalizedTitle = title.trim();
+    if (normalizedTitle.isEmpty) {
+      throw ArgumentError.value(title, 'title', '历史记录标题不能为空');
+    }
+    return normalizedTitle;
+  }
+
+  static Expression<bool> _nullableTextEquals(
+    Expression<String> expression,
+    String? value,
+  ) {
+    if (value == null) {
+      return expression.isNull();
+    }
+    return expression.equals(value);
   }
 }
 

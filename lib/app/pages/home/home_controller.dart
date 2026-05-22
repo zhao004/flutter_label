@@ -94,19 +94,22 @@ class HomeController extends GetxController {
         return;
       }
 
-      await _projectService.createDatasetProject(normalizedDirectory);
+      final project = await _projectService.createDatasetProject(
+        normalizedDirectory,
+      );
+      final datasetDir = project.datasetDir;
 
       await _recordHistory(
         actionType: HistoryActionType.createDatasetProject,
         title: '新建数据集项目',
-        description: normalizedDirectory,
+        description: datasetDir,
         targetRoute: Routes.annotation,
-        payload: normalizedDirectory,
+        payload: datasetDir,
       );
 
       await Get.toNamed(
         Routes.annotation,
-        arguments: AnnotationOpenRequest(datasetDir: normalizedDirectory),
+        arguments: AnnotationOpenRequest(datasetDir: datasetDir),
       );
     } catch (error) {
       errorMessage.value = '新建数据集项目失败：$error';
@@ -131,19 +134,20 @@ class HomeController extends GetxController {
       if (datasetDir == null || datasetDir.isEmpty) {
         return;
       }
-      await _projectService.readDatasetProject(datasetDir);
+      final project = await _projectService.readDatasetProject(datasetDir);
+      final normalizedDatasetDir = project.datasetDir;
 
       await _recordHistory(
         actionType: HistoryActionType.openDatasetProject,
         title: '打开数据集项目',
-        description: datasetDir,
+        description: normalizedDatasetDir,
         targetRoute: Routes.annotation,
-        payload: datasetDir,
+        payload: normalizedDatasetDir,
       );
 
       await Get.toNamed(
         Routes.annotation,
-        arguments: AnnotationOpenRequest(datasetDir: datasetDir),
+        arguments: AnnotationOpenRequest(datasetDir: normalizedDatasetDir),
       );
     } catch (error) {
       errorMessage.value = '打开数据集项目失败：$error';
@@ -275,7 +279,7 @@ class HomeController extends GetxController {
       return;
     }
 
-    await database.addHistoryRecord(
+    await database.upsertHistoryRecord(
       actionType: actionType,
       title: title,
       description: description,
