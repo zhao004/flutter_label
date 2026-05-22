@@ -116,7 +116,7 @@ Future<void> _configureDesktopWindow() async {
 
   await windowManager.ensureInitialized();
   const windowOptions = WindowOptions(
-    size: Size(1440, 960),
+    size: Size(1180, 760),
     minimumSize: Size(1180, 760),
     center: true,
     backgroundColor: FluentDesignTokens.titleBarBackground,

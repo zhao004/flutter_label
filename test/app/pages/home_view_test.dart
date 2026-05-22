@@ -40,6 +40,11 @@ void main() {
     expect(find.text('打开数据集项目'), findsAtLeastNWidgets(1));
     expect(find.text('新建数据集项目'), findsOneWidget);
     expect(find.text('项目历史'), findsOneWidget);
+    expect(
+      find.text('选择或新建包含 data.yaml 的 YOLO 数据集项目，进入图片标注并自动维护标准目录。'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('自动生成 images/labels'), findsNothing);
     expect(find.text('进入视频抽帧'), findsNothing);
     expect(find.text('进入自动预标注'), findsNothing);
     expect(find.text('进入模型验证'), findsNothing);
@@ -50,6 +55,28 @@ void main() {
       find.byIcon(Icons.create_new_folder_outlined),
       findsAtLeastNWidgets(1),
     );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
+  testWidgets('首页桌面布局左右卡片等高且历史区更宽', (tester) async {
+    setTestViewport(tester, const Size(1280, 900));
+
+    await tester.pumpWidget(buildTestApp(home: const HomeView()));
+    await tester.pumpAndSettle();
+
+    final projectRect = tester.getRect(
+      find.byKey(const ValueKey('project-entry-card')),
+    );
+    final historyRect = tester.getRect(
+      find.byKey(const ValueKey('history-panel-card')),
+    );
+
+    expect(projectRect.top, historyRect.top);
+    expect(projectRect.bottom, historyRect.bottom);
+    expect(historyRect.width, greaterThan(projectRect.width));
+    expect(historyRect.width / projectRect.width, closeTo(1.5, 0.08));
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
@@ -94,6 +121,8 @@ void main() {
     await tester.pump();
     final controller = Get.find<HomeController>();
     expect(controller.errorMessage.value, contains('项目文件夹不存在'));
+    expect(find.byKey(ValueKey('history-open-$recordId')), findsOneWidget);
+    expect(find.byKey(ValueKey('history-delete-$recordId')), findsOneWidget);
 
     await tester.tap(tile, buttons: kSecondaryButton);
     await tester.pump();
@@ -102,6 +131,55 @@ void main() {
     expect(find.text('删除此记录'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 120));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
+  testWidgets('项目历史长路径中间省略且移除冗余动作文本', (tester) async {
+    setTestViewport(tester, const Size(1200, 900));
+    final longProjectDir = Directory(
+      path.join(
+        Directory.systemTemp.path,
+        'flutter_label_home_history',
+        'Downloads',
+        'datasets',
+        'archive',
+        'data_v3',
+      ),
+    )..createSync(recursive: true);
+    addTearDown(() {
+      final root = Directory(
+        path.join(Directory.systemTemp.path, 'flutter_label_home_history'),
+      );
+      if (root.existsSync()) {
+        root.deleteSync(recursive: true);
+      }
+    });
+    final longProjectPath = longProjectDir.path;
+    final recordId = await database.addHistoryRecord(
+      actionType: HistoryActionType.openDatasetProject,
+      title: '测试数据集',
+      description: longProjectPath,
+      targetRoute: Routes.annotation,
+      payload: longProjectPath,
+    );
+
+    await tester.pumpWidget(buildTestApp(home: const HomeView()));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(
+      find.text(
+        '${path.rootPrefix(longProjectPath)}...${path.separator}archive${path.separator}data_v3',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(longProjectPath), findsNothing);
+    expect(find.text('快速打开'), findsNothing);
+    expect(find.byIcon(Icons.open_in_new), findsOneWidget);
+    expect(find.byIcon(Icons.delete_outline), findsWidgets);
+    expect(_historyRecordActionLabelFinder(recordId), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
@@ -157,4 +235,11 @@ Future<List<HistoryRecord>> _readRecentHistory(AppDatabase database) {
         ])
         ..limit(10))
       .get();
+}
+
+Finder _historyRecordActionLabelFinder(int recordId) {
+  return find.descendant(
+    of: find.byKey(ValueKey('history-record-$recordId')),
+    matching: find.text('打开数据集项目'),
+  );
 }

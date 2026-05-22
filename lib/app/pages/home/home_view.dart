@@ -8,6 +8,11 @@ import '../../widgets/fluent_app_shell.dart';
 import '../../widgets/fluent_card.dart';
 import 'home_controller.dart';
 
+const double _homeDesktopBreakpoint = 900;
+const double _desktopHomeCardHeight = 432;
+const double _historyListHeight = 360;
+const int _maxHistoryPathDisplayLength = 48;
+
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
 
@@ -23,7 +28,8 @@ class HomeView extends GetView<HomeController> {
           children: [
             LayoutBuilder(
               builder: (context, constraints) {
-                final useTwoColumns = constraints.maxWidth >= 960;
+                final useTwoColumns =
+                    constraints.maxWidth >= _homeDesktopBreakpoint;
                 if (!useTwoColumns) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -34,17 +40,7 @@ class HomeView extends GetView<HomeController> {
                     ],
                   );
                 }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 460,
-                      child: _ProjectEntryCard(controller: controller),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(child: _HistoryPanel(controller: controller)),
-                  ],
-                );
+                return _DesktopHomeLayout(controller: controller);
               },
             ),
           ],
@@ -54,10 +50,50 @@ class HomeView extends GetView<HomeController> {
   }
 }
 
-class _ProjectEntryCard extends StatelessWidget {
-  const _ProjectEntryCard({required this.controller});
+class _DesktopHomeLayout extends StatelessWidget {
+  const _DesktopHomeLayout({required this.controller});
 
   final HomeController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: _desktopHomeCardHeight,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 2,
+            child: KeyedSubtree(
+              key: const ValueKey('project-entry-card'),
+              child: _ProjectEntryCard(
+                controller: controller,
+                pinActionsToBottom: true,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 3,
+            child: KeyedSubtree(
+              key: const ValueKey('history-panel-card'),
+              child: _HistoryPanel(controller: controller),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProjectEntryCard extends StatelessWidget {
+  const _ProjectEntryCard({
+    required this.controller,
+    this.pinActionsToBottom = false,
+  });
+
+  final HomeController controller;
+  final bool pinActionsToBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +102,7 @@ class _ProjectEntryCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       hoverable: true,
       child: Column(
+        mainAxisSize: pinActionsToBottom ? MainAxisSize.max : MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
@@ -74,68 +111,78 @@ class _ProjectEntryCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '选择包含 data.yaml 的项目根目录，读取类别并进入图片标注；也可以新建空项目目录。',
+            '选择或新建包含 data.yaml 的 YOLO 数据集项目，进入图片标注并自动维护标准目录。',
             style: TextStyle(color: palette.textSecondary, fontSize: 13),
           ),
-          const SizedBox(height: 12),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: palette.fieldBackground,
-              border: Border.fromBorderSide(
-                BorderSide(color: palette.fieldBorder),
-              ),
-              borderRadius: const BorderRadius.all(Radius.circular(6)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                '也可以新建数据集项目，自动生成 images/labels/train/val/test 目录。',
-                style: TextStyle(color: palette.textSecondary, fontSize: 13),
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              Obx(
-                () => SizedBox(
-                  height: 38,
-                  child: FilledButton.icon(
-                    onPressed: controller.isPicking.value
-                        ? null
-                        : controller.openDatasetProject,
-                    icon: controller.isPicking.value
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.folder_open, size: 18),
-                    label: const Text('打开数据集项目'),
-                  ),
-                ),
-              ),
-              Obx(
-                () => SizedBox(
-                  height: 38,
-                  child: OutlinedButton.icon(
-                    onPressed: controller.isPicking.value
-                        ? null
-                        : controller.createDatasetProject,
-                    icon: const Icon(
-                      Icons.create_new_folder_outlined,
-                      size: 18,
-                    ),
-                    label: const Text('新建数据集项目'),
-                  ),
-                ),
-              ),
-            ],
+          if (pinActionsToBottom)
+            const Spacer()
+          else
+            const SizedBox(height: 18),
+          _ProjectActionBar(
+            controller: controller,
+            expandButtons: pinActionsToBottom,
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProjectActionBar extends StatelessWidget {
+  const _ProjectActionBar({
+    required this.controller,
+    required this.expandButtons,
+  });
+
+  final HomeController controller;
+  final bool expandButtons;
+
+  @override
+  Widget build(BuildContext context) {
+    final openButton = Obx(
+      () => SizedBox(
+        height: 38,
+        child: FilledButton.icon(
+          onPressed: controller.isPicking.value
+              ? null
+              : controller.openDatasetProject,
+          icon: controller.isPicking.value
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.folder_open, size: 18),
+          label: const Text('打开数据集项目'),
+        ),
+      ),
+    );
+    final createButton = Obx(
+      () => SizedBox(
+        height: 38,
+        child: OutlinedButton.icon(
+          onPressed: controller.isPicking.value
+              ? null
+              : controller.createDatasetProject,
+          icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+          label: const Text('新建数据集项目'),
+        ),
+      ),
+    );
+
+    if (expandButtons) {
+      return Row(
+        children: [
+          Expanded(child: openButton),
+          const SizedBox(width: 12),
+          Expanded(child: createButton),
+        ],
+      );
+    }
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [openButton, createButton],
     );
   }
 }
@@ -207,7 +254,7 @@ class _HistoryPanel extends StatelessWidget {
               if (shrinkWrap) {
                 return listView;
               }
-              return SizedBox(height: 360, child: listView);
+              return SizedBox(height: _historyListHeight, child: listView);
             },
           ),
         ],
@@ -253,6 +300,9 @@ class _HistoryTileState extends State<_HistoryTile> {
       projectPath: widget.controller.historyProjectPath(record),
       isMissingProject: isMissingProject,
     );
+    final displaySubtitle = subtitle == null
+        ? null
+        : _compactHistoryPath(subtitle);
 
     final card = FluentCard(
       padding: EdgeInsets.zero,
@@ -310,17 +360,20 @@ class _HistoryTileState extends State<_HistoryTile> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (subtitle != null) ...[
+                      if (displaySubtitle != null) ...[
                         const SizedBox(height: 3),
-                        Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: isMissingProject
-                                ? palette.errorRed
-                                : palette.textSecondary,
-                            fontSize: 12,
+                        Tooltip(
+                          message: subtitle ?? '',
+                          child: Text(
+                            displaySubtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isMissingProject
+                                  ? palette.errorRed
+                                  : palette.textSecondary,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       ],
@@ -328,18 +381,30 @@ class _HistoryTileState extends State<_HistoryTile> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                if (isMissingProject) ...[
-                  Icon(Icons.error_outline, size: 18, color: palette.errorRed),
-                  const SizedBox(width: 8),
-                ],
-                Text(
-                  record.actionType.label,
-                  style: TextStyle(
+                if (isProjectRecord) ...[
+                  _HistoryIconButton(
+                    key: ValueKey('history-open-${record.id}'),
+                    tooltip: isMissingProject ? '项目文件夹不存在' : '快速打开',
+                    icon: isMissingProject
+                        ? Icons.error_outline
+                        : Icons.open_in_new,
                     color: isMissingProject
                         ? palette.errorRed
                         : palette.textSecondary,
-                    fontSize: 12,
+                    onPressed: () =>
+                        widget.controller.openHistoryProject(record),
                   ),
+                  const SizedBox(width: 4),
+                ],
+                _HistoryIconButton(
+                  key: ValueKey('history-delete-${record.id}'),
+                  tooltip: '删除此记录',
+                  icon: Icons.delete_outline,
+                  color: isMissingProject
+                      ? palette.errorRed
+                      : palette.textSecondary,
+                  onPressed: () =>
+                      widget.controller.deleteHistoryRecord(record),
                 ),
               ],
             ),
@@ -377,6 +442,35 @@ class _HistoryTileState extends State<_HistoryTile> {
   }
 }
 
+class _HistoryIconButton extends StatelessWidget {
+  const _HistoryIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+    super.key,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: IconButton(
+        constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+        padding: EdgeInsets.zero,
+        iconSize: 18,
+        onPressed: onPressed,
+        icon: Icon(icon, color: color),
+      ),
+    );
+  }
+}
+
 String? _historySubtitle({
   required HistoryRecord record,
   required String? projectPath,
@@ -399,6 +493,25 @@ String? _historySubtitle({
     return targetRoute;
   }
   return null;
+}
+
+String _compactHistoryPath(String value) {
+  final text = value.trim();
+  if (text.length <= _maxHistoryPathDisplayLength) {
+    return text;
+  }
+
+  const windowsSeparator = '\\';
+  final separator = text.contains(windowsSeparator) ? windowsSeparator : '/';
+  final parts = text.split(RegExp(r'[\\/]')).where((part) => part.isNotEmpty);
+  final segments = parts.toList(growable: false);
+  if (segments.length < 4) {
+    return text;
+  }
+
+  final head = segments.first;
+  final tail = segments.skip(segments.length - 2).join(separator);
+  return '$head$separator...$separator$tail';
 }
 
 class _HistoryMessage extends StatelessWidget {
