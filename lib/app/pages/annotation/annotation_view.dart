@@ -70,10 +70,9 @@ class _AnnotationViewState extends State<AnnotationView> {
             return Scaffold(
               backgroundColor: FluentDesignTokens.appBackground,
               appBar: PreferredSize(
-                preferredSize: const Size.fromHeight(64),
+                preferredSize: const Size.fromHeight(48),
                 child: _AnnotationCommandBar(
                   isCompact: isCompact,
-                  annotationController: _annotationController,
                   actions: _buildAppBarActions(context, isCompact),
                 ),
               ),
@@ -170,19 +169,6 @@ class _AnnotationViewState extends State<AnnotationView> {
 
     return [
       _AppBarInkBoundary(
-        child: FilledButton.tonalIcon(
-          onPressed: () => unawaited(_showImportDialog(context)),
-          icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          label: const Text('导入图片'),
-        ),
-      ),
-      _AppBarInkBoundary(
         child: Obx(
           () => _UndoRedoButtonGroup(
             canUndo: _annotationController.canUndo.value,
@@ -192,22 +178,28 @@ class _AnnotationViewState extends State<AnnotationView> {
           ),
         ),
       ),
+      const _ToolbarDivider(),
       _AppBarInkBoundary(
-        child: FilledButton.icon(
-          onPressed: () => unawaited(
-            _annotationController.saveCurrent(showSuccessToast: true),
-          ),
-          icon: const Icon(Icons.save, size: 18),
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          label: const Text('保存'),
+        child: _CompactToolbarButton(
+          tooltip: '导入图片',
+          icon: Icons.add_photo_alternate_outlined,
+          onPressed: () => unawaited(_showImportDialog(context)),
         ),
       ),
-      const SizedBox(width: 8),
+      _AppBarInkBoundary(
+        child: Obx(() {
+          final isDirty = _annotationController.isDirty.value;
+          return _CompactToolbarButton(
+            tooltip: isDirty ? '保存 Ctrl+S（未保存）' : '保存 Ctrl+S',
+            icon: isDirty ? Icons.save : Icons.save_outlined,
+            color: isDirty ? FluentDesignTokens.warningText : null,
+            onPressed: () => unawaited(
+              _annotationController.saveCurrent(showSuccessToast: true),
+            ),
+          );
+        }),
+      ),
+      const SizedBox(width: 4),
     ];
   }
 
@@ -400,14 +392,9 @@ class _AnnotationViewState extends State<AnnotationView> {
 }
 
 class _AnnotationCommandBar extends StatelessWidget {
-  const _AnnotationCommandBar({
-    required this.isCompact,
-    required this.annotationController,
-    required this.actions,
-  });
+  const _AnnotationCommandBar({required this.isCompact, required this.actions});
 
   final bool isCompact;
-  final AnnotationController annotationController;
   final List<Widget> actions;
 
   @override
@@ -418,44 +405,13 @@ class _AnnotationCommandBar extends StatelessWidget {
         border: Border(bottom: BorderSide(color: FluentDesignTokens.border)),
       ),
       child: SizedBox(
-        height: 64,
+        height: 48,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             children: [
-              _AppBarInkBoundary(
-                child: _BackToHomeButton(isCompact: isCompact),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Obx(() {
-                  final image = annotationController.currentImage.value;
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '图片标注',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        image?.relativePath ?? '未加载图片',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: FluentDesignTokens.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  );
-                }),
-              ),
-              const SizedBox(width: 12),
+              const _AppBarInkBoundary(child: _BackToHomeButton()),
+              if (isCompact) const Spacer() else const _ToolbarDivider(),
               for (final action in actions) action,
             ],
           ),
@@ -466,24 +422,14 @@ class _AnnotationCommandBar extends StatelessWidget {
 }
 
 class _BackToHomeButton extends StatelessWidget {
-  const _BackToHomeButton({required this.isCompact});
-
-  final bool isCompact;
+  const _BackToHomeButton();
 
   @override
   Widget build(BuildContext context) {
-    if (isCompact) {
-      return IconButton(
-        tooltip: '返回工作页',
-        onPressed: _returnToHome,
-        icon: const Icon(Icons.arrow_back),
-      );
-    }
-
-    return OutlinedButton.icon(
+    return _CompactToolbarButton(
+      tooltip: '返回工作页',
+      icon: Icons.arrow_back,
       onPressed: _returnToHome,
-      icon: const Icon(Icons.arrow_back, size: 18),
-      label: const Text('返回工作页'),
     );
   }
 
@@ -513,7 +459,6 @@ class _UndoRedoButtonGroup extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: FluentDesignTokens.fieldBackground,
-        border: Border.all(color: FluentDesignTokens.fieldBorder),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -541,21 +486,35 @@ class _CompactToolbarButton extends StatelessWidget {
     required this.tooltip,
     required this.icon,
     required this.onPressed,
+    this.color,
   });
 
   final String tooltip;
   final IconData icon;
   final VoidCallback? onPressed;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      icon: Icon(icon, size: 18),
+      icon: Icon(icon, size: 18, color: color),
       constraints: const BoxConstraints.tightFor(width: 36, height: 36),
       padding: EdgeInsets.zero,
       visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+class _ToolbarDivider extends StatelessWidget {
+  const _ToolbarDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Container(width: 1, height: 20, color: FluentDesignTokens.border),
     );
   }
 }
