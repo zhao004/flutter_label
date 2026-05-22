@@ -19,6 +19,8 @@ void main() {
       buildTestApp(home: const FluentAppShell(child: SizedBox.shrink())),
     );
 
+    expect(find.byIcon(Icons.label_outline), findsNothing);
+    expect(_titleBarText(tester), '项目工作台');
     expect(find.text('工作台'), findsOneWidget);
     expect(find.text('视频抽帧'), findsOneWidget);
     expect(find.text('图片标注'), findsNothing);
@@ -28,9 +30,12 @@ void main() {
     setTestViewport(tester, const Size(1200, 800));
 
     await tester.pumpWidget(
-      buildTestApp(home: const FluentAppShell(child: SizedBox.shrink())),
+      buildTestApp(
+        home: const FluentAppShell(title: '自定义页面标题', child: SizedBox.shrink()),
+      ),
     );
 
+    expect(_titleBarText(tester), '自定义页面标题');
     expect(find.text('工作台'), findsOneWidget);
     expect(find.byIcon(Icons.dashboard_outlined), findsOneWidget);
 
@@ -68,4 +73,10 @@ void main() {
     expect(find.text('视频抽帧'), findsOneWidget);
     expect(tester.getTopLeft(find.text('工作台')).dx, greaterThanOrEqualTo(0));
   });
+}
+
+String _titleBarText(WidgetTester tester) {
+  final titleFinder = find.byKey(FluentWindowTitleBar.titleTextKey);
+  expect(titleFinder, findsOneWidget);
+  return tester.widget<Text>(titleFinder).data!;
 }

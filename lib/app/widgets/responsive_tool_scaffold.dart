@@ -33,11 +33,13 @@ class ResponsiveToolScaffold extends StatelessWidget {
   const ResponsiveToolScaffold({
     required this.panes,
     this.title,
+    this.description,
     this.breakpoint = ResponsiveBreakpoints.twoPane,
     super.key,
   }) : assert(panes.length >= 2, '至少需要两个面板才能形成响应式工具页');
 
   final String? title;
+  final String? description;
   final List<ResponsiveToolPane> panes;
   final double breakpoint;
 

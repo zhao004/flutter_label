@@ -57,6 +57,7 @@ class _AnnotationViewState extends State<AnnotationView> {
   @override
   Widget build(BuildContext context) {
     return FluentAppShell(
+      title: '图片标注',
       showNavigation: false,
       child: KeyboardListener(
         focusNode: _focusNode,
