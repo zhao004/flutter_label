@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:fluent_ui/fluent_ui.dart' hide Tooltip;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' show Icons, Tooltip;
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -21,7 +22,30 @@ class FluentNavigationItem {
   final IconData icon;
 }
 
-/// 桌面应用统一外壳，负责自绘标题栏、窗口按钮和左侧 Fluent 导航。
+/// 保存桌面导航栏折叠状态，保证命名路由切换后新 Shell 复用同一份状态。
+class FluentNavigationShellController extends GetxController {
+  final isNavigationCollapsed = false.obs;
+
+  PaneDisplayMode get desktopDisplayMode => isNavigationCollapsed.value
+      ? PaneDisplayMode.compact
+      : PaneDisplayMode.expanded;
+
+  void toggleNavigationCollapsed() {
+    isNavigationCollapsed.value = !isNavigationCollapsed.value;
+  }
+}
+
+FluentNavigationShellController ensureFluentNavigationShellController() {
+  if (Get.isRegistered<FluentNavigationShellController>()) {
+    return Get.find<FluentNavigationShellController>();
+  }
+  return Get.put<FluentNavigationShellController>(
+    FluentNavigationShellController(),
+    permanent: true,
+  );
+}
+
+/// 桌面应用统一外壳，负责自绘标题栏、窗口按钮和 Fluent NavigationView。
 class FluentAppShell extends StatefulWidget {
   const FluentAppShell({
     required this.child,
@@ -79,164 +103,214 @@ class FluentAppShell extends StatefulWidget {
     ),
   ];
 
+  static const List<FluentNavigationItem> _allItems = [
+    ..._primaryItems,
+    ..._footerItems,
+  ];
+
   @override
   State<FluentAppShell> createState() => _FluentAppShellState();
 }
 
 class _FluentAppShellState extends State<FluentAppShell> {
-  var _isNavigationCollapsed = false;
+  final _navigationViewKey = GlobalKey<NavigationViewState>();
+  late final FluentNavigationShellController _navigationShellController;
+
+  @override
+  void initState() {
+    super.initState();
+    _navigationShellController = ensureFluentNavigationShellController();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: FluentDesignTokens.appBackground,
-      body: Column(
-        children: [
-          const FluentWindowTitleBar(),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                if (!widget.showNavigation ||
-                    constraints.maxWidth <
-                        FluentAppShell._compactNavigationBreakpoint) {
-                  return widget.child;
-                }
-                return Row(
-                  children: [
-                    FluentNavigationPane(
-                      primaryItems: FluentAppShell._primaryItems,
-                      footerItems: FluentAppShell._footerItems,
-                      isCollapsed: _isNavigationCollapsed,
-                      onToggleCollapsed: _toggleNavigationCollapsed,
-                    ),
-                    Expanded(child: widget.child),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+    if (!widget.showNavigation) {
+      return NavigationView(
+        titleBar: const FluentWindowTitleBar(),
+        content: _ShellContentSurface(child: widget.child),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useMinimalNavigation =
+            constraints.maxWidth < FluentAppShell._compactNavigationBreakpoint;
+        if (useMinimalNavigation) {
+          return _buildNavigationView(
+            displayMode: PaneDisplayMode.minimal,
+            isCollapsed: true,
+            useMinimalNavigation: true,
+          );
+        }
+
+        return Obx(() {
+          final isCollapsed =
+              _navigationShellController.isNavigationCollapsed.value;
+          return _buildNavigationView(
+            displayMode: _navigationShellController.desktopDisplayMode,
+            isCollapsed: isCollapsed,
+            useMinimalNavigation: false,
+          );
+        });
+      },
     );
   }
 
-  void _toggleNavigationCollapsed() {
-    setState(() {
-      _isNavigationCollapsed = !_isNavigationCollapsed;
-    });
+  Widget _buildNavigationView({
+    required PaneDisplayMode displayMode,
+    required bool isCollapsed,
+    required bool useMinimalNavigation,
+  }) {
+    return NavigationView(
+      key: _navigationViewKey,
+      titleBar: FluentWindowTitleBar(
+        leading: _NavigationToggleButton(
+          isCollapsed: isCollapsed,
+          onPressed: () => _handleNavigationToggle(useMinimalNavigation),
+        ),
+      ),
+      pane: NavigationPane(
+        selected: _selectedNavigationIndex(),
+        onChanged: _openNavigationIndex,
+        displayMode: displayMode,
+        size: const NavigationPaneSize(
+          compactWidth: 64,
+          openWidth: FluentDesignTokens.navigationWidth,
+          openMinWidth: 220,
+          openMaxWidth: FluentDesignTokens.navigationWidth,
+          headerHeight: 40,
+        ),
+        header: const Text('导航'),
+        toggleButton: null,
+        items: _buildNavigationPaneItems(FluentAppShell._primaryItems),
+        footerItems: _buildNavigationPaneItems(FluentAppShell._footerItems),
+      ),
+      paneBodyBuilder: (_, _) => _ShellContentSurface(child: widget.child),
+    );
+  }
+
+  List<NavigationPaneItem> _buildNavigationPaneItems(
+    List<FluentNavigationItem> items,
+  ) {
+    return [
+      for (final item in items)
+        PaneItem(
+          icon: Icon(item.icon, size: 18),
+          title: Text(item.label),
+          body: const SizedBox.shrink(),
+        ),
+    ];
+  }
+
+  int? _selectedNavigationIndex() {
+    final currentRoute = Get.currentRoute.isEmpty
+        ? AppRouteNames.home
+        : Uri.tryParse(Get.currentRoute)?.path ?? Get.currentRoute;
+    final index = FluentAppShell._allItems.indexWhere(
+      (item) => item.route == currentRoute,
+    );
+    return index.isNegative ? null : index;
+  }
+
+  void _openNavigationIndex(int index) {
+    if (index < 0 || index >= FluentAppShell._allItems.length) {
+      return;
+    }
+    _openRoute(FluentAppShell._allItems[index].route);
+  }
+
+  void _handleNavigationToggle(bool useMinimalNavigation) {
+    if (useMinimalNavigation) {
+      _navigationViewKey.currentState?.togglePane();
+      return;
+    }
+    _navigationShellController.toggleNavigationCollapsed();
+  }
+
+  void _openRoute(String route) {
+    final currentRoute = Get.currentRoute.isEmpty
+        ? AppRouteNames.home
+        : Get.currentRoute;
+    if (currentRoute == route || Get.testMode || Get.key.currentState == null) {
+      return;
+    }
+    Get.offNamed(route);
   }
 }
 
-class FluentWindowTitleBar extends StatelessWidget {
-  const FluentWindowTitleBar({super.key});
+class _ShellContentSurface extends StatelessWidget {
+  const _ShellContentSurface({required this.child});
+
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: FluentDesignTokens.titleBarBackground,
-        border: Border(bottom: BorderSide(color: FluentDesignTokens.border)),
-      ),
-      child: SizedBox(
-        height: FluentDesignTokens.titleBarHeight,
-        child: Row(
-          children: [
-            const SizedBox(width: 16),
-            const _AppMark(),
-            const SizedBox(width: 10),
-            const Text(
-              'YOLO 图片标注工具',
-              style: TextStyle(
-                color: FluentDesignTokens.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(width: 16),
-            const Expanded(child: _WindowDragArea()),
-            _WindowControlButton(
-              tooltip: '最小化',
-              icon: Icons.remove,
-              onPressed: () => unawaited(WindowControls.minimize()),
-            ),
-            _MaximizeButton(),
-            _WindowControlButton(
-              tooltip: '关闭',
-              icon: Icons.close,
-              hoverColor: FluentDesignTokens.closeHover,
-              hoverIconColor: Colors.white,
-              onPressed: () => unawaited(WindowControls.close()),
-            ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            palette.appBackground,
+            palette.cardBackground.withValues(alpha: 0.82),
           ],
         ),
       ),
+      child: child,
     );
   }
 }
 
-class FluentNavigationPane extends StatelessWidget {
-  const FluentNavigationPane({
-    required this.primaryItems,
-    required this.footerItems,
-    required this.isCollapsed,
-    required this.onToggleCollapsed,
-    super.key,
-  });
+class FluentWindowTitleBar extends TitleBar {
+  const FluentWindowTitleBar({this.leading, super.key})
+    : super(height: FluentDesignTokens.titleBarHeight);
 
-  final List<FluentNavigationItem> primaryItems;
-  final List<FluentNavigationItem> footerItems;
-  final bool isCollapsed;
-  final VoidCallback onToggleCollapsed;
-  static const double _collapsedWidth = 64;
-  static const double _expandedContentThreshold = 160;
-  static const EdgeInsets _collapsedPadding = EdgeInsets.symmetric(
-    horizontal: 8,
-    vertical: 10,
-  );
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: FluentDesignTokens.navigationBackground,
-        border: Border(right: BorderSide(color: FluentDesignTokens.border)),
-      ),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOutCubic,
-        width: isCollapsed
-            ? _collapsedWidth
-            : FluentDesignTokens.navigationWidth,
-        child: Padding(
-          padding: isCollapsed
-              ? _collapsedPadding
-              : FluentDesignTokens.navigationPadding,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final useCollapsedLayout =
-                  isCollapsed ||
-                  constraints.maxWidth < _expandedContentThreshold;
-              return Column(
-                children: [
-                  _NavigationHeader(
-                    isCollapsed: useCollapsedLayout,
-                    onToggleCollapsed: onToggleCollapsed,
-                  ),
-                  const SizedBox(height: 8),
-                  for (final item in primaryItems)
-                    _NavigationTile(
-                      item: item,
-                      isCollapsed: useCollapsedLayout,
-                    ),
-                  const Spacer(),
-                  for (final item in footerItems)
-                    _NavigationTile(
-                      item: item,
-                      isCollapsed: useCollapsedLayout,
-                    ),
-                ],
-              );
-            },
+    final palette = FluentDesignTokens.of(context);
+    return Acrylic(
+      tint: palette.titleBarBackground,
+      tintAlpha: 0.86,
+      luminosityAlpha: 0.82,
+      blurAmount: 20,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: palette.border)),
+        ),
+        child: SizedBox(
+          height: FluentDesignTokens.titleBarHeight,
+          child: Row(
+            children: [
+              const SizedBox(width: 16),
+              if (leading != null) ...[leading!, const SizedBox(width: 8)],
+              const _AppMark(),
+              const SizedBox(width: 10),
+              Text(
+                'YOLO 图片标注工具',
+                style: FluentTheme.of(context).typography.caption?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(child: _WindowDragArea()),
+              _WindowControlButton(
+                tooltip: '最小化',
+                icon: Icons.remove,
+                onPressed: () => unawaited(WindowControls.minimize()),
+              ),
+              _MaximizeButton(),
+              _WindowControlButton(
+                tooltip: '关闭',
+                icon: Icons.close,
+                hoverColor: palette.closeHover,
+                hoverIconColor: Colors.white,
+                onPressed: () => unawaited(WindowControls.close()),
+              ),
+            ],
           ),
         ),
       ),
@@ -321,15 +395,15 @@ class _WindowControlButton extends StatefulWidget {
     required this.tooltip,
     required this.icon,
     required this.onPressed,
-    this.hoverColor = const Color(0xFFEDEDED),
-    this.hoverIconColor = FluentDesignTokens.textPrimary,
+    this.hoverColor,
+    this.hoverIconColor,
   });
 
   final String tooltip;
   final IconData icon;
   final VoidCallback onPressed;
-  final Color hoverColor;
-  final Color hoverIconColor;
+  final Color? hoverColor;
+  final Color? hoverIconColor;
 
   @override
   State<_WindowControlButton> createState() => _WindowControlButtonState();
@@ -337,34 +411,48 @@ class _WindowControlButton extends StatefulWidget {
 
 class _WindowControlButtonState extends State<_WindowControlButton> {
   var _hovered = false;
+  var _pressed = false;
 
   @override
   Widget build(BuildContext context) {
+    final theme = FluentTheme.of(context);
+    final palette = FluentDesignTokens.of(context);
+    final hoverColor = widget.hoverColor ?? palette.fieldBackground;
+    final iconColor = _hovered
+        ? widget.hoverIconColor ?? palette.textPrimary
+        : palette.textPrimary;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
+      onExit: (_) => setState(() {
+        _hovered = false;
+        _pressed = false;
+      }),
       child: Tooltip(
         message: widget.tooltip,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(FluentDesignTokens.controlRadius),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTapUp: (_) => setState(() => _pressed = false),
           onTap: widget.onPressed,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            width: 46,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _hovered ? widget.hoverColor : Colors.transparent,
-              borderRadius: BorderRadius.circular(
-                FluentDesignTokens.controlRadius,
+          child: AnimatedScale(
+            duration: theme.fasterAnimationDuration,
+            curve: theme.animationCurve,
+            scale: _pressed ? 0.96 : (_hovered ? 1.03 : 1),
+            child: AnimatedContainer(
+              duration: theme.fasterAnimationDuration,
+              curve: theme.animationCurve,
+              width: 46,
+              height: 32,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: _hovered ? hoverColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(
+                  FluentDesignTokens.controlRadius,
+                ),
               ),
-            ),
-            child: Icon(
-              widget.icon,
-              size: 16,
-              color: _hovered
-                  ? widget.hoverIconColor
-                  : FluentDesignTokens.textPrimary,
+              child: Icon(widget.icon, size: 16, color: iconColor),
             ),
           ),
         ),
@@ -380,8 +468,19 @@ class _AppMark extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: FluentDesignTokens.primaryBlue,
-        borderRadius: BorderRadius.circular(6),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0067C0), Color(0xFF60CDFF)],
+        ),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: FluentDesignTokens.of(
+              context,
+            ).shadow.withValues(alpha: 0.32),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: const SizedBox(
         width: 28,
@@ -392,174 +491,23 @@ class _AppMark extends StatelessWidget {
   }
 }
 
-class _NavigationHeader extends StatelessWidget {
-  const _NavigationHeader({
+class _NavigationToggleButton extends StatelessWidget {
+  const _NavigationToggleButton({
     required this.isCollapsed,
-    required this.onToggleCollapsed,
+    required this.onPressed,
   });
 
   final bool isCollapsed;
-  final VoidCallback onToggleCollapsed;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 32,
-      child: Row(
-        mainAxisAlignment: isCollapsed
-            ? MainAxisAlignment.center
-            : MainAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: isCollapsed ? '展开导航' : '折叠导航',
-            child: InkWell(
-              borderRadius: BorderRadius.circular(
-                FluentDesignTokens.controlRadius,
-              ),
-              onTap: onToggleCollapsed,
-              child: SizedBox.square(
-                dimension: 32,
-                child: Icon(
-                  isCollapsed ? Icons.menu : Icons.menu_open,
-                  size: 18,
-                  color: FluentDesignTokens.textSecondary,
-                ),
-              ),
-            ),
-          ),
-          if (!isCollapsed) ...[
-            const SizedBox(width: 10),
-            const Text(
-              '导航',
-              style: TextStyle(
-                color: FluentDesignTokens.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ],
+    return Tooltip(
+      message: isCollapsed ? '展开导航' : '折叠导航',
+      child: IconButton(
+        icon: Icon(isCollapsed ? Icons.menu : Icons.menu_open, size: 18),
+        onPressed: onPressed,
       ),
     );
-  }
-}
-
-class _NavigationTile extends StatelessWidget {
-  const _NavigationTile({required this.item, required this.isCollapsed});
-
-  final FluentNavigationItem item;
-  final bool isCollapsed;
-
-  @override
-  Widget build(BuildContext context) {
-    final currentRoute = Get.currentRoute.isEmpty
-        ? AppRouteNames.home
-        : Get.currentRoute;
-    final selected = currentRoute == item.route;
-    final contentColor = selected
-        ? FluentDesignTokens.primaryBlue
-        : FluentDesignTokens.textSecondary;
-    if (isCollapsed) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 5),
-        child: Tooltip(
-          message: item.label,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(
-              FluentDesignTokens.controlRadius,
-            ),
-            onTap: selected ? null : () => _openRoute(item.route),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: selected
-                    ? FluentDesignTokens.selectedBackground
-                    : FluentDesignTokens.navigationBackground,
-                borderRadius: BorderRadius.circular(
-                  FluentDesignTokens.controlRadius,
-                ),
-              ),
-              child: SizedBox(
-                height: 40,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? FluentDesignTokens.primaryBlue
-                              : FluentDesignTokens.navigationBackground,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: const SizedBox(width: 3, height: 20),
-                      ),
-                    ),
-                    Icon(item.icon, size: 18, color: contentColor),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(FluentDesignTokens.controlRadius),
-        onTap: selected ? null : () => _openRoute(item.route),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: selected
-                ? FluentDesignTokens.selectedBackground
-                : FluentDesignTokens.navigationBackground,
-            borderRadius: BorderRadius.circular(
-              FluentDesignTokens.controlRadius,
-            ),
-          ),
-          child: SizedBox(
-            height: 34,
-            child: Row(
-              children: [
-                const SizedBox(width: 2),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? FluentDesignTokens.primaryBlue
-                        : FluentDesignTokens.navigationBackground,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  child: const SizedBox(width: 3, height: 20),
-                ),
-                const SizedBox(width: 8),
-                Icon(item.icon, size: 18, color: contentColor),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    item.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: FluentDesignTokens.textPrimary,
-                      fontSize: 13,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openRoute(String route) {
-    if (Get.testMode || Get.key.currentState == null) {
-      return;
-    }
-    Get.offNamed(route);
   }
 }
