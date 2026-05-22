@@ -28,29 +28,27 @@ class ResponsiveToolPane {
   final bool showHeader;
 }
 
-/// 将工具页统一为标题区、参数卡和预览卡布局，并让面板随窗口高度伸缩。
+/// 将工具页统一为参数卡和预览卡布局，并让面板随窗口高度伸缩。
 class ResponsiveToolScaffold extends StatelessWidget {
   const ResponsiveToolScaffold({
-    required this.title,
     required this.panes,
-    this.description,
+    this.title,
     this.breakpoint = ResponsiveBreakpoints.twoPane,
     super.key,
   }) : assert(panes.length >= 2, '至少需要两个面板才能形成响应式工具页');
 
-  final String title;
-  final String? description;
+  final String? title;
   final List<ResponsiveToolPane> panes;
   final double breakpoint;
 
   static const double _minimumPaneHeight = 420;
-  static const double _pageHeaderMinHeight = 78;
   static const double _stackedPaneGap = 14;
 
   @override
   Widget build(BuildContext context) {
     final palette = FluentDesignTokens.of(context);
     return FluentAppShell(
+      title: title,
       child: ColoredBox(
         color: palette.appBackground,
         child: LayoutBuilder(
@@ -78,11 +76,7 @@ class ResponsiveToolScaffold extends StatelessWidget {
               padding: FluentDesignTokens.pagePadding,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: FluentDesignTokens.pageGap),
-                  Expanded(child: _DesktopToolLayout(panes: panes)),
-                ],
+                children: [Expanded(child: _DesktopToolLayout(panes: panes))],
               ),
             );
           },
@@ -92,21 +86,7 @@ class ResponsiveToolScaffold extends StatelessWidget {
   }
 
   Widget _buildScrollablePage(Widget body) {
-    return ListView(
-      padding: FluentDesignTokens.pagePadding,
-      children: [
-        _buildHeader(),
-        const SizedBox(height: FluentDesignTokens.pageGap),
-        body,
-      ],
-    );
-  }
-
-  Widget _buildHeader() {
-    return FluentPageHeader(
-      title: title,
-      description: description ?? _defaultDescription(title),
-    );
+    return ListView(padding: FluentDesignTokens.pagePadding, children: [body]);
   }
 
   double _stackedPaneHeightFor(BoxConstraints constraints) {
@@ -115,24 +95,10 @@ class ResponsiveToolScaffold extends StatelessWidget {
     }
 
     final availableHeight =
-        constraints.maxHeight -
-        FluentDesignTokens.pagePadding.vertical -
-        _pageHeaderMinHeight -
-        FluentDesignTokens.pageGap;
+        constraints.maxHeight - FluentDesignTokens.pagePadding.vertical;
     return availableHeight > _minimumPaneHeight
         ? availableHeight
         : _minimumPaneHeight;
-  }
-
-  String _defaultDescription(String title) {
-    return switch (title) {
-      '视频抽帧' => '按帧间隔、目标目录和切分策略生成图片样本。',
-      '自动预标注' => '选择模型、图片目录和写入策略，批量生成 YOLO 标签。',
-      '模型验证' => '选择验证类型、模型和素材，检查检测结果与预览。',
-      '格式转换' => '读取 data.yaml 与标签目录，校验类别映射后输出目标格式。',
-      '数据集导出' => '按 train / val / test 比例切分并生成可复现实验包。',
-      _ => '配置参数并查看任务运行状态。',
-    };
   }
 }
 

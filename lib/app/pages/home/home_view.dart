@@ -15,16 +15,12 @@ class HomeView extends GetView<HomeController> {
   Widget build(BuildContext context) {
     final palette = FluentDesignTokens.of(context);
     return FluentAppShell(
+      title: '项目工作台',
       child: ColoredBox(
         color: palette.appBackground,
         child: ListView(
           padding: FluentDesignTokens.pagePadding,
           children: [
-            const FluentPageHeader(
-              title: '项目工作台',
-              description: '管理 YOLO 数据集项目；打开或新建项目后进入图片标注，其他处理工具通过左侧导航进入。',
-            ),
-            const SizedBox(height: FluentDesignTokens.pageGap),
             LayoutBuilder(
               builder: (context, constraints) {
                 final useTwoColumns = constraints.maxWidth >= 960;

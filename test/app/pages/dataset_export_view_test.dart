@@ -19,7 +19,6 @@ void main() {
 
     await tester.pumpWidget(buildTestApp(home: const DatasetExportView()));
 
-    expect(find.text('数据集导出'), findsAtLeastNWidgets(1));
     expect(find.text('项目目录'), findsOneWidget);
     expect(find.text('导出目录'), findsOneWidget);
     expect(find.text('train'), findsOneWidget);
@@ -39,8 +38,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('参数'), findsOneWidget);
-    expect(find.text('日志'), findsOneWidget);
+    expect(find.text('项目目录'), findsOneWidget);
+    expect(find.text('导出日志'), findsOneWidget);
   });
 
   testWidgets('数据集导出运行中会禁用路径选择和比例输入', (tester) async {

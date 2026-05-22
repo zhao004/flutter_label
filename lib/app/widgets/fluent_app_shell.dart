@@ -50,11 +50,13 @@ class FluentAppShell extends StatefulWidget {
   const FluentAppShell({
     required this.child,
     this.showNavigation = true,
+    this.title,
     super.key,
   });
 
   final Widget child;
   final bool showNavigation;
+  final String? title;
   static const double _compactNavigationBreakpoint = 760;
 
   static const List<FluentNavigationItem> _primaryItems = [
@@ -108,6 +110,18 @@ class FluentAppShell extends StatefulWidget {
     ..._footerItems,
   ];
 
+  static const Map<String, String> _routeTitles = {
+    AppRouteNames.home: '项目工作台',
+    AppRouteNames.annotation: '图片标注',
+    AppRouteNames.videoExtract: '视频抽帧',
+    AppRouteNames.autoLabel: '自动预标注',
+    AppRouteNames.modelVerify: '模型验证',
+    AppRouteNames.formatConvert: '格式转换',
+    AppRouteNames.datasetExport: '数据集导出',
+    AppRouteNames.runLog: '运行日志',
+    AppRouteNames.settings: '应用配置',
+  };
+
   @override
   State<FluentAppShell> createState() => _FluentAppShellState();
 }
@@ -124,9 +138,10 @@ class _FluentAppShellState extends State<FluentAppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final title = widget.title ?? _currentPageTitle();
     if (!widget.showNavigation) {
       return NavigationView(
-        titleBar: const FluentWindowTitleBar(),
+        titleBar: FluentWindowTitleBar(titleText: title),
         content: _ShellContentSurface(child: widget.child),
       );
     }
@@ -137,6 +152,7 @@ class _FluentAppShellState extends State<FluentAppShell> {
             constraints.maxWidth < FluentAppShell._compactNavigationBreakpoint;
         if (useMinimalNavigation) {
           return _buildNavigationView(
+            title: title,
             displayMode: PaneDisplayMode.minimal,
             isCollapsed: true,
             useMinimalNavigation: true,
@@ -147,6 +163,7 @@ class _FluentAppShellState extends State<FluentAppShell> {
           final isCollapsed =
               _navigationShellController.isNavigationCollapsed.value;
           return _buildNavigationView(
+            title: title,
             displayMode: _navigationShellController.desktopDisplayMode,
             isCollapsed: isCollapsed,
             useMinimalNavigation: false,
@@ -157,6 +174,7 @@ class _FluentAppShellState extends State<FluentAppShell> {
   }
 
   Widget _buildNavigationView({
+    required String title,
     required PaneDisplayMode displayMode,
     required bool isCollapsed,
     required bool useMinimalNavigation,
@@ -164,6 +182,7 @@ class _FluentAppShellState extends State<FluentAppShell> {
     return NavigationView(
       key: _navigationViewKey,
       titleBar: FluentWindowTitleBar(
+        titleText: title,
         leading: _NavigationToggleButton(
           isCollapsed: isCollapsed,
           onPressed: () => _handleNavigationToggle(useMinimalNavigation),
@@ -210,6 +229,13 @@ class _FluentAppShellState extends State<FluentAppShell> {
       (item) => item.route == currentRoute,
     );
     return index.isNegative ? null : index;
+  }
+
+  String _currentPageTitle() {
+    final currentRoute = Get.currentRoute.isEmpty
+        ? AppRouteNames.home
+        : Uri.tryParse(Get.currentRoute)?.path ?? Get.currentRoute;
+    return FluentAppShell._routeTitles[currentRoute] ?? 'YOLO 图片标注工具';
   }
 
   void _openNavigationIndex(int index) {
@@ -263,9 +289,12 @@ class _ShellContentSurface extends StatelessWidget {
 }
 
 class FluentWindowTitleBar extends TitleBar {
-  const FluentWindowTitleBar({this.leading, super.key})
+  const FluentWindowTitleBar({required this.titleText, this.leading, super.key})
     : super(height: FluentDesignTokens.titleBarHeight);
 
+  static const titleTextKey = ValueKey<String>('fluent-title-bar-title');
+
+  final String titleText;
   final Widget? leading;
 
   @override
@@ -286,10 +315,9 @@ class FluentWindowTitleBar extends TitleBar {
             children: [
               const SizedBox(width: 16),
               if (leading != null) ...[leading!, const SizedBox(width: 8)],
-              const _AppMark(),
-              const SizedBox(width: 10),
               Text(
-                'YOLO 图片标注工具',
+                titleText,
+                key: titleTextKey,
                 style: FluentTheme.of(context).typography.caption?.copyWith(
                   color: palette.textPrimary,
                   fontWeight: FontWeight.w600,
@@ -456,36 +484,6 @@ class _WindowControlButtonState extends State<_WindowControlButton> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _AppMark extends StatelessWidget {
-  const _AppMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0067C0), Color(0xFF60CDFF)],
-        ),
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: FluentDesignTokens.of(
-              context,
-            ).shadow.withValues(alpha: 0.32),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: const SizedBox(
-        width: 28,
-        height: 28,
-        child: Icon(Icons.label_outline, color: Colors.white, size: 18),
       ),
     );
   }

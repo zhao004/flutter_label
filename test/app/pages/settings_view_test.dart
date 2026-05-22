@@ -20,8 +20,7 @@ void main() {
     await tester.pumpWidget(buildTestApp(home: const SettingsView()));
     await tester.pumpAndSettle();
 
-    expect(find.text('配置'), findsAtLeastNWidgets(1));
-    expect(find.text('应用配置'), findsOneWidget);
+    expect(find.text('重新读取'), findsOneWidget);
     expect(find.text('标注页快捷键'), findsOneWidget);
     expect(find.textContaining('开启后，空格'), findsAtLeastNWidgets(1));
     expect(controller.spaceCompletesAndSelectsNext.value, isFalse);

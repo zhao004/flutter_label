@@ -19,7 +19,6 @@ void main() {
 
     await tester.pumpWidget(buildTestApp(home: const VideoExtractView()));
 
-    expect(find.text('视频抽帧'), findsAtLeastNWidgets(1));
     expect(find.text('视频文件'), findsOneWidget);
     expect(find.text('输出目录'), findsOneWidget);
     expect(find.text('开始抽帧'), findsAtLeastNWidgets(1));
@@ -36,7 +35,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('参数'), findsOneWidget);
-    expect(find.text('预览'), findsOneWidget);
+    expect(find.text('视频文件'), findsOneWidget);
+    expect(find.text('实时预览'), findsOneWidget);
   });
 }

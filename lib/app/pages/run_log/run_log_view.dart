@@ -14,38 +14,40 @@ class RunLogView extends GetView<RunLogController> {
   Widget build(BuildContext context) {
     final palette = FluentDesignTokens.of(context);
     return FluentAppShell(
+      title: '运行日志',
       child: ColoredBox(
         color: palette.appBackground,
         child: ListView(
           padding: FluentDesignTokens.pagePadding,
           children: [
-            FluentPageHeader(
-              title: '错误日志',
-              description: '记录用户可见的失败信息，便于回溯模型、导入导出和配置保存问题。',
-              action: SizedBox(
-                width: 112,
-                height: 40,
-                child: OutlinedButton.icon(
-                  onPressed: controller.clearLogs,
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  label: const Text('清空'),
-                ),
-              ),
-            ),
-            const SizedBox(height: FluentDesignTokens.pageGap),
             FluentCard(
               padding: EdgeInsets.zero,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      '错误记录',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            '错误记录',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 112,
+                          height: 40,
+                          child: OutlinedButton.icon(
+                            onPressed: controller.clearLogs,
+                            icon: const Icon(Icons.delete_outline, size: 18),
+                            label: const Text('清空'),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Divider(height: 1, color: palette.border),

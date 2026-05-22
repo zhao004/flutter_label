@@ -22,7 +22,6 @@ void main() {
 
     await tester.pumpWidget(buildTestApp(home: const ModelVerifyView()));
 
-    expect(find.text('模型验证'), findsAtLeastNWidgets(1));
     expect(find.text('ONNX 模型'), findsOneWidget);
     expect(find.text('输出目录'), findsNothing);
     expect(find.text('开始验证'), findsAtLeastNWidgets(1));

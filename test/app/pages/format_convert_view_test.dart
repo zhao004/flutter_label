@@ -19,7 +19,6 @@ void main() {
 
     await tester.pumpWidget(buildTestApp(home: const FormatConvertView()));
 
-    expect(find.text('格式转换'), findsAtLeastNWidgets(1));
     expect(find.text('输入格式'), findsOneWidget);
     expect(find.text('输出格式'), findsOneWidget);
     expect(find.text('输入目录'), findsOneWidget);
@@ -36,8 +35,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('参数'), findsOneWidget);
-    expect(find.text('日志'), findsOneWidget);
+    expect(find.text('输入格式'), findsOneWidget);
+    expect(find.text('转换日志'), findsOneWidget);
   });
 
   testWidgets('格式转换运行中会禁用路径选择', (tester) async {

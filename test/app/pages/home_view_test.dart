@@ -38,7 +38,6 @@ void main() {
     await tester.pumpWidget(buildTestApp(home: const HomeView()));
     await tester.pumpAndSettle();
 
-    expect(find.text('项目工作台'), findsOneWidget);
     expect(find.text('打开数据集项目'), findsAtLeastNWidgets(1));
     expect(find.text('新建数据集项目'), findsOneWidget);
     expect(find.text('项目历史'), findsOneWidget);
@@ -64,7 +63,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('项目工作台'), findsOneWidget);
+    expect(find.text('数据集项目'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);

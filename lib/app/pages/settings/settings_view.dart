@@ -17,28 +17,13 @@ class SettingsView extends GetView<AppSettingsController> {
   Widget build(BuildContext context) {
     final palette = FluentDesignTokens.of(context);
     return FluentAppShell(
+      title: '应用配置',
       child: ColoredBox(
         color: palette.appBackground,
         child: Obx(
           () => ListView(
             padding: FluentDesignTokens.pagePadding,
             children: [
-              FluentPageHeader(
-                title: '配置',
-                description: '配置会保存在本机应用数据目录中，重启后仍然生效。',
-                action: SizedBox(
-                  width: 132,
-                  height: 40,
-                  child: OutlinedButton.icon(
-                    onPressed: controller.isLoading.value
-                        ? null
-                        : () => unawaited(controller.load()),
-                    icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text('重新读取'),
-                  ),
-                ),
-              ),
-              const SizedBox(height: FluentDesignTokens.pageGap),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 760),
                 child: FluentCard(
@@ -46,12 +31,29 @@ class SettingsView extends GetView<AppSettingsController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        '应用配置',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              '应用配置',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 132,
+                            height: 40,
+                            child: OutlinedButton.icon(
+                              onPressed: controller.isLoading.value
+                                  ? null
+                                  : () => unawaited(controller.load()),
+                              icon: const Icon(Icons.refresh, size: 18),
+                              label: const Text('重新读取'),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 14),
                       Row(
