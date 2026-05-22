@@ -31,7 +31,6 @@ class VideoExtractController extends GetxController {
   final generatedImages = <String>[].obs;
   final logs = <String>[].obs;
   final latestPreviewImage = RxnString();
-  final statusMessage = '请选择视频并开始抽帧'.obs;
   final errorMessage = RxnString();
   final usedNative = false.obs;
 
@@ -90,13 +89,11 @@ class VideoExtractController extends GetxController {
     }
     if (videoPath.value.trim().isEmpty) {
       errorMessage.value = '请选择视频文件';
-      statusMessage.value = '抽帧启动失败';
       AppToast.error(errorMessage.value, source: '视频抽帧');
       return;
     }
     if (outputDir.value.trim().isEmpty) {
       errorMessage.value = '请选择输出目录';
-      statusMessage.value = '抽帧启动失败';
       AppToast.error(errorMessage.value, source: '视频抽帧');
       return;
     }
@@ -109,7 +106,6 @@ class VideoExtractController extends GetxController {
     activeOutputDir.value = targetOutputDir;
     latestPreviewImage.value = null;
     generatedImages.clear();
-    statusMessage.value = '正在抽帧...';
     logs
       ..clear()
       ..add('开始抽帧...');
@@ -135,16 +131,12 @@ class VideoExtractController extends GetxController {
           ? ''
           : '，跳过 ${result.skippedImages.length} 张';
       logs.add('抽帧完成，共保留 ${result.generatedImages.length} 张图片$skippedText。');
-      statusMessage.value =
-          '抽帧完成，共保留 ${result.generatedImages.length} 张图片$skippedText';
       AppToast.success('抽帧完成，共保留 ${result.generatedImages.length} 张图片');
     } catch (error) {
       if (isCancelRequested.value || error.toString().contains('-6')) {
-        statusMessage.value = '抽帧已停止，已保留输出目录中的已生成图片';
         await _refreshPreview(targetOutputDir);
       } else {
         errorMessage.value = error.toString();
-        statusMessage.value = '抽帧失败';
         logs.add('抽帧失败：$error');
         AppToast.error(error, source: '视频抽帧');
       }
@@ -160,7 +152,6 @@ class VideoExtractController extends GetxController {
       return;
     }
     isCancelRequested.value = true;
-    statusMessage.value = '正在停止抽帧...';
     final requested = _videoExtractService.cancelRunningExtraction();
     if (!requested) {
       logs.add('停止请求发送失败：native_core 尚未加载或不可用。');

@@ -1,9 +1,8 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart' show OrderingMode, OrderingTerm;
-import 'package:flutter/gestures.dart';
-
 import 'package:drift/native.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_label/app/database/database.dart';
 import 'package:flutter_label/app/database/type/history_action_type.dart';

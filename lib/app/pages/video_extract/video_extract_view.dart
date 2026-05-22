@@ -173,9 +173,6 @@ class _SettingsPanel extends StatelessWidget {
                 icon: const Icon(Icons.drive_folder_upload),
                 label: const Text('导入输出目录到标注页'),
               ),
-              Text(
-                '${controller.statusMessage.value}；已生成 ${controller.generatedImages.length} 张图片',
-              ),
             ],
           ),
         ],
@@ -242,7 +239,6 @@ class _PreviewPanel extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: _PreviewContent(
                 imagePath: controller.latestPreviewImage.value,
-                status: controller.statusMessage.value,
               ),
             ),
           ),
@@ -253,10 +249,9 @@ class _PreviewPanel extends StatelessWidget {
 }
 
 class _PreviewContent extends StatelessWidget {
-  const _PreviewContent({required this.imagePath, required this.status});
+  const _PreviewContent({required this.imagePath});
 
   final String? imagePath;
-  final String status;
 
   @override
   Widget build(BuildContext context) {
@@ -272,8 +267,6 @@ class _PreviewContent extends StatelessWidget {
               color: Theme.of(context).colorScheme.outline,
             ),
             const SizedBox(height: 12),
-            Text(status, textAlign: TextAlign.center),
-            const SizedBox(height: 8),
             const Text('开始抽帧后将自动显示最新生成的图片'),
           ],
         ),
@@ -304,8 +297,6 @@ class _PreviewContent extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         SelectableText(path, maxLines: 1),
-        const SizedBox(height: 4),
-        Text(status),
       ],
     );
   }

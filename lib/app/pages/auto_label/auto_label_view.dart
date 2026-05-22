@@ -193,13 +193,6 @@ class _AutoLabelSettings extends StatelessWidget {
                       ),
                   ],
                 ),
-              OutlinedButton.icon(
-                onPressed: controller.imageDir.value.isEmpty
-                    ? null
-                    : () => unawaited(controller.openInAnnotation()),
-                icon: const Icon(Icons.edit_note),
-                label: const Text('进入标注页修正'),
-              ),
               if (controller.result.value != null)
                 Text(
                   '写入 ${controller.result.value!.writtenCount}，合并 ${controller.result.value!.mergedCount}，跳过 ${controller.result.value!.skippedCount}',
@@ -308,9 +301,6 @@ class _AutoLabelPreviewPanel extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
-                Text(controller.previewStatus),
-                const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

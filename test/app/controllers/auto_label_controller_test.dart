@@ -42,7 +42,6 @@ void main() {
     expect(controller.isStopping.value, isFalse);
     expect(controller.wasStopped.value, isTrue);
     expect(controller.errorMessage.value, isNull);
-    expect(controller.previewStatus, '已停止自动预标注');
     expect(controller.logs, contains('自动预标注已停止。'));
   });
 

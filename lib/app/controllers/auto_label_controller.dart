@@ -8,8 +8,6 @@ import '../models/auto_label_config.dart';
 import '../models/dataset_split.dart';
 import '../models/detection_result.dart';
 import '../models/image_item.dart';
-import '../models/project_config.dart';
-import '../routes/app_pages.dart';
 import '../services/app_toast_service.dart';
 import '../services/auto_label_service.dart';
 import '../services/data_yaml_service.dart';
@@ -151,35 +149,6 @@ class AutoLabelController extends GetxController {
       return '未选择预览图片';
     }
     return activePreviewImage?.relativePath ?? path;
-  }
-
-  String get previewStatus {
-    final filteredImages = filteredPreviewImages;
-    if (isRunning.value) {
-      if (isStopping.value) {
-        return '正在停止自动预标注...';
-      }
-      if (totalCount.value > 0) {
-        return '自动预标注运行中：${processedCount.value}/${totalCount.value}';
-      }
-      return '自动预标注运行中...';
-    }
-    final output = result.value;
-    if (output != null) {
-      return '写入 ${output.writtenCount}，合并 ${output.mergedCount}，跳过 ${output.skippedCount}';
-    }
-    if (errorMessage.value != null) {
-      return errorMessage.value!;
-    }
-    if (wasStopped.value) {
-      return '已停止自动预标注';
-    }
-    if (filteredImages.isEmpty) {
-      return imageDir.value.isEmpty ? '请选择图片目录' : '未找到可预览图片';
-    }
-    return folderFilter.value == DatasetFolderFilter.all
-        ? '已加载 ${previewImages.length} 张预览图片'
-        : '已筛选 ${filteredImages.length}/${previewImages.length} 张预览图片';
   }
 
   @override
@@ -404,18 +373,6 @@ class AutoLabelController extends GetxController {
     if (selectedPreviewIndex.value < filteredPreviewImages.length - 1) {
       selectedPreviewIndex.value++;
     }
-  }
-
-  Future<void> openInAnnotation() async {
-    if (imageDir.value.trim().isEmpty) {
-      errorMessage.value = '请先选择图片目录';
-      AppToast.error(errorMessage.value, source: '自动预标注');
-      return;
-    }
-    await Get.toNamed(
-      Routes.annotation,
-      arguments: AnnotationOpenRequest(imageDir: imageDir.value),
-    );
   }
 
   Future<void> _inferDatasetPaths(String selectedImageDir) async {

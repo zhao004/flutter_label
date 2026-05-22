@@ -43,7 +43,6 @@ void main() {
         controller.latestPreviewImage.value,
         p.join(tempDir.path, 'video1_0000000000ms.jpg'),
       );
-      expect(controller.statusMessage.value, contains('抽帧完成'));
       controller.onClose();
     });
 
@@ -64,7 +63,6 @@ void main() {
 
       expect(service.cancelCalled, isTrue);
       expect(controller.isRunning.value, isFalse);
-      expect(controller.statusMessage.value, contains('抽帧已停止'));
       controller.onClose();
     });
   });
