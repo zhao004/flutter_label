@@ -50,6 +50,31 @@ void main() {
     expect(() => database.watchRecentHistory(limit: 0), throwsArgumentError);
   });
 
+  test('按 id 删除单条历史记录', () async {
+    final firstId = await database.addHistoryRecord(
+      actionType: HistoryActionType.openDatasetProject,
+      title: '打开数据集项目',
+      payload: 'dataset-a',
+    );
+    final secondId = await database.addHistoryRecord(
+      actionType: HistoryActionType.openDatasetProject,
+      title: '打开数据集项目',
+      payload: 'dataset-b',
+    );
+
+    final deletedCount = await database.deleteHistoryRecord(firstId);
+    final records = await database.watchRecentHistory(limit: 10).first;
+
+    expect(deletedCount, 1);
+    expect(records, hasLength(1));
+    expect(records.single.id, secondId);
+    expect(records.single.payload, 'dataset-b');
+  });
+
+  test('非法历史记录 id 会拒绝删除', () {
+    expect(() => database.deleteHistoryRecord(0), throwsArgumentError);
+  });
+
   test('写入运行日志后按创建时间倒序读取', () async {
     await database.addRunLogRecord(
       level: RunLogLevel.error,

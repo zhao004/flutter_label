@@ -89,6 +89,17 @@ class AppDatabase extends _$AppDatabase {
     return delete(historyRecords).go();
   }
 
+  /// 删除单条历史记录，调用方必须传入数据库内已有的正整数 id。
+  Future<int> deleteHistoryRecord(int id) {
+    if (id <= 0) {
+      throw ArgumentError.value(id, 'id', '历史记录 id 必须大于 0');
+    }
+
+    return (delete(
+      historyRecords,
+    )..where((record) => record.id.equals(id))).go();
+  }
+
   /// 监听最近运行日志，倒序展示最新错误，避免日志页无限制渲染。
   Stream<List<RunLogRecord>> watchRecentRunLogs({
     int limit = recentRunLogLimit,

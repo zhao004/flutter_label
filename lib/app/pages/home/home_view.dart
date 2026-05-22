@@ -1,3 +1,4 @@
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -200,7 +201,10 @@ class _HistoryPanel extends StatelessWidget {
                 itemCount: records.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
-                  return _HistoryTile(record: records[index]);
+                  return _HistoryTile(
+                    controller: controller,
+                    record: records[index],
+                  );
                 },
               );
 
@@ -216,54 +220,189 @@ class _HistoryPanel extends StatelessWidget {
   }
 }
 
-class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({required this.record});
+class _HistoryTile extends StatefulWidget {
+  const _HistoryTile({required this.controller, required this.record});
 
+  final HomeController controller;
   final HistoryRecord record;
 
   @override
+  State<_HistoryTile> createState() => _HistoryTileState();
+}
+
+class _HistoryTileState extends State<_HistoryTile> {
+  late final fluent.FlyoutController _flyoutController;
+
+  @override
+  void initState() {
+    super.initState();
+    _flyoutController = fluent.FlyoutController();
+  }
+
+  @override
+  void dispose() {
+    _flyoutController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final description = record.description;
     final palette = FluentDesignTokens.of(context);
-    return FluentCard(
+    final record = widget.record;
+    final isProjectRecord = widget.controller.isProjectHistoryRecord(record);
+    final projectExists = widget.controller.historyProjectExists(record);
+    final isMissingProject = isProjectRecord && !projectExists;
+    final subtitle = _historySubtitle(
+      record: record,
+      projectPath: widget.controller.historyProjectPath(record),
+      isMissingProject: isMissingProject,
+    );
+
+    final card = FluentCard(
       padding: EdgeInsets.zero,
-      color: palette.fieldBackground,
-      borderColor: palette.fieldBorder.withValues(alpha: 0.52),
+      color: isMissingProject
+          ? palette.errorRed.withValues(alpha: 0.08)
+          : palette.fieldBackground,
+      borderColor: isMissingProject
+          ? palette.errorRed.withValues(alpha: 0.78)
+          : palette.fieldBorder.withValues(alpha: 0.52),
       radius: 8,
       hoverable: true,
       blurSigma: 8,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 46,
-              child: Text(
-                _formatHistoryTime(record.createdAt),
-                style: TextStyle(color: palette.textSecondary, fontSize: 12),
-              ),
+      child: MouseRegion(
+        cursor: isProjectRecord
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
+        child: GestureDetector(
+          key: ValueKey('history-record-${record.id}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: isProjectRecord
+              ? () => widget.controller.openHistoryProject(record)
+              : null,
+          onSecondaryTap: _showDeleteMenu,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 46,
+                  child: Text(
+                    _formatHistoryTime(record.createdAt),
+                    style: TextStyle(
+                      color: isMissingProject
+                          ? palette.errorRed
+                          : palette.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        record.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isMissingProject
+                              ? palette.errorRed
+                              : palette.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isMissingProject
+                                ? palette.errorRed
+                                : palette.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                if (isMissingProject) ...[
+                  Icon(Icons.error_outline, size: 18, color: palette.errorRed),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  record.actionType.label,
+                  style: TextStyle(
+                    color: isMissingProject
+                        ? palette.errorRed
+                        : palette.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                description == null || description.isEmpty
-                    ? record.title
-                    : '${record.title} · $description',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              record.actionType.label,
-              style: TextStyle(color: palette.textSecondary, fontSize: 12),
-            ),
-          ],
+          ),
         ),
       ),
     );
+
+    return fluent.FlyoutTarget(controller: _flyoutController, child: card);
   }
+
+  void _showDeleteMenu() {
+    _flyoutController.showFlyout(
+      barrierDismissible: true,
+      dismissOnPointerMoveAway: false,
+      builder: (context) {
+        return fluent.MenuFlyout(
+          items: [
+            fluent.MenuFlyoutItem(
+              leading: const Icon(Icons.delete_outline, size: 16),
+              text: const Text('删除此记录'),
+              onPressed: () {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) {
+                    return;
+                  }
+                  widget.controller.deleteHistoryRecord(widget.record);
+                });
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+String? _historySubtitle({
+  required HistoryRecord record,
+  required String? projectPath,
+  required bool isMissingProject,
+}) {
+  if (isMissingProject) {
+    return '项目文件夹不存在';
+  }
+  if (projectPath != null && projectPath.isNotEmpty) {
+    return projectPath;
+  }
+
+  final description = record.description?.trim();
+  if (description != null && description.isNotEmpty) {
+    return description;
+  }
+
+  final targetRoute = record.targetRoute?.trim();
+  if (targetRoute != null && targetRoute.isNotEmpty) {
+    return targetRoute;
+  }
+  return null;
 }
 
 class _HistoryMessage extends StatelessWidget {

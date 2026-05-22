@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:get/get.dart';
@@ -29,6 +30,52 @@ class HomeController extends GetxController {
       return Stream.value(const <HistoryRecord>[]);
     }
     return database.watchRecentHistory(limit: _historyLimit);
+  }
+
+  bool isProjectHistoryRecord(HistoryRecord record) {
+    return switch (record.actionType) {
+      HistoryActionType.openDatasetProject ||
+      HistoryActionType.createDatasetProject ||
+      HistoryActionType.openProjectFile => true,
+      HistoryActionType.openImagesDirectory ||
+      HistoryActionType.openFeaturePage => false,
+    };
+  }
+
+  String? historyProjectPath(HistoryRecord record) {
+    final payload = record.payload?.trim();
+    if (payload != null && payload.isNotEmpty) {
+      return payload;
+    }
+
+    final description = record.description?.trim();
+    if (description != null && description.isNotEmpty) {
+      return description;
+    }
+    return null;
+  }
+
+  bool historyProjectExists(HistoryRecord record) {
+    final targetPath = historyProjectPath(record);
+    if (!isProjectHistoryRecord(record) || targetPath == null) {
+      return false;
+    }
+
+    try {
+      return switch (record.actionType) {
+        HistoryActionType.openDatasetProject ||
+        HistoryActionType.createDatasetProject => Directory(
+          targetPath,
+        ).existsSync(),
+        HistoryActionType.openProjectFile => File(targetPath).existsSync(),
+        HistoryActionType.openImagesDirectory ||
+        HistoryActionType.openFeaturePage => false,
+      };
+    } on FileSystemException {
+      return false;
+    } on ArgumentError {
+      return false;
+    }
   }
 
   Future<void> createDatasetProject() async {
@@ -149,6 +196,55 @@ class HomeController extends GetxController {
     }
   }
 
+  Future<void> deleteHistoryRecord(HistoryRecord record) async {
+    final database = _database;
+    if (database == null) {
+      return;
+    }
+
+    try {
+      await database.deleteHistoryRecord(record.id);
+      AppToast.success('历史记录已删除');
+    } catch (error) {
+      errorMessage.value = '删除历史失败：$error';
+      AppToast.error(errorMessage.value, source: '首页');
+    }
+  }
+
+  Future<void> openHistoryProject(HistoryRecord record) async {
+    if (!isProjectHistoryRecord(record)) {
+      return;
+    }
+    if (isPicking.value) {
+      return;
+    }
+
+    isPicking.value = true;
+    errorMessage.value = null;
+    try {
+      final targetPath = historyProjectPath(record);
+      if (targetPath == null) {
+        throw const FormatException('历史记录缺少项目路径');
+      }
+
+      switch (record.actionType) {
+        case HistoryActionType.openDatasetProject:
+        case HistoryActionType.createDatasetProject:
+          await _openHistoryDatasetProject(targetPath);
+        case HistoryActionType.openProjectFile:
+          await _openHistoryProjectFile(targetPath);
+        case HistoryActionType.openImagesDirectory:
+        case HistoryActionType.openFeaturePage:
+          throw const FormatException('该历史记录不是项目入口');
+      }
+    } catch (error) {
+      errorMessage.value = '打开历史项目失败：$error';
+      AppToast.error(errorMessage.value, source: '首页');
+    } finally {
+      isPicking.value = false;
+    }
+  }
+
   Future<void> _openFeaturePage({
     required String route,
     required String title,
@@ -185,6 +281,30 @@ class HomeController extends GetxController {
       description: description,
       targetRoute: targetRoute,
       payload: payload,
+    );
+  }
+
+  Future<void> _openHistoryDatasetProject(String datasetDir) async {
+    if (!Directory(datasetDir).existsSync()) {
+      throw FileSystemException('项目文件夹不存在', datasetDir);
+    }
+
+    await _projectService.readDatasetProject(datasetDir);
+    await Get.toNamed(
+      Routes.annotation,
+      arguments: AnnotationOpenRequest(datasetDir: datasetDir),
+    );
+  }
+
+  Future<void> _openHistoryProjectFile(String projectFilePath) async {
+    if (!File(projectFilePath).existsSync()) {
+      throw FileSystemException('项目配置文件不存在', projectFilePath);
+    }
+
+    await _projectService.readProject(projectFilePath);
+    await Get.toNamed(
+      Routes.annotation,
+      arguments: AnnotationOpenRequest(projectFilePath: projectFilePath),
     );
   }
 }
