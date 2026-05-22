@@ -22,7 +22,7 @@ void main() {
     expect(find.text('视频文件'), findsOneWidget);
     expect(find.text('输出目录'), findsOneWidget);
     expect(find.text('开始抽帧'), findsAtLeastNWidgets(1));
-    expect(find.text('停止抽帧'), findsOneWidget);
+    expect(find.text('停止'), findsNothing);
     expect(find.text('实时预览'), findsOneWidget);
     expect(find.text('同名文件处理'), findsOneWidget);
     expect(find.byIcon(Icons.play_arrow), findsAtLeastNWidgets(1));
@@ -37,5 +37,23 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('视频文件'), findsOneWidget);
     expect(find.text('实时预览'), findsOneWidget);
+  });
+
+  testWidgets('视频抽帧运行时主按钮切换为停止', (tester) async {
+    setTestViewport(tester, const Size(1200, 900));
+    final controller = Get.find<VideoExtractController>();
+    controller.isRunning.value = true;
+
+    await tester.pumpWidget(buildTestApp(home: const VideoExtractView()));
+    await tester.pump();
+
+    expect(find.text('开始抽帧'), findsNothing);
+    expect(find.text('停止'), findsOneWidget);
+    expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
+
+    controller.isCancelRequested.value = true;
+    await tester.pump();
+
+    expect(find.text('停止'), findsOneWidget);
   });
 }

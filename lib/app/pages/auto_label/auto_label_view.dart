@@ -152,26 +152,16 @@ class _AutoLabelSettings extends StatelessWidget {
           TaskActionArea(
             children: [
               FilledButton.icon(
-                onPressed: controller.isRunning.value
+                onPressed: controller.isStopping.value
                     ? null
+                    : controller.isRunning.value
+                    ? () => unawaited(controller.stopAutoLabel())
                     : () => unawaited(controller.startAutoLabel()),
                 icon: controller.isRunning.value
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? const Icon(Icons.stop_circle_outlined)
                     : const Icon(Icons.auto_fix_high),
-                label: Text(controller.isRunning.value ? '预标注中...' : '开始预标注'),
+                label: Text(controller.isRunning.value ? '停止' : '开始预标注'),
               ),
-              if (controller.isRunning.value)
-                OutlinedButton.icon(
-                  onPressed: controller.isStopping.value
-                      ? null
-                      : () => unawaited(controller.stopAutoLabel()),
-                  icon: const Icon(Icons.stop_circle_outlined),
-                  label: Text(controller.isStopping.value ? '停止中...' : '停止预标注'),
-                ),
               if (controller.isRunning.value && controller.totalCount.value > 0)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

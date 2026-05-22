@@ -207,7 +207,7 @@ void main() {
     }
   });
 
-  testWidgets('自动预标注运行时显示停止按钮', (tester) async {
+  testWidgets('自动预标注运行时主按钮切换为停止', (tester) async {
     setTestViewport(tester, const Size(1200, 900));
     final controller = Get.find<AutoLabelController>();
     controller.isRunning.value = true;
@@ -215,14 +215,14 @@ void main() {
     await tester.pumpWidget(buildTestApp(home: const AutoLabelView()));
     await tester.pump();
 
-    expect(find.text('预标注中...'), findsOneWidget);
-    expect(find.text('停止预标注'), findsOneWidget);
+    expect(find.text('开始预标注'), findsNothing);
+    expect(find.text('停止'), findsOneWidget);
     expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
 
     controller.isStopping.value = true;
     await tester.pump();
 
-    expect(find.text('停止中...'), findsOneWidget);
+    expect(find.text('停止'), findsOneWidget);
   });
 
   testWidgets('自动预标注预览支持按文件夹筛选', (tester) async {
@@ -259,7 +259,6 @@ void main() {
 
     expect(find.text('images/val/val.jpg'), findsOneWidget);
     expect(find.text('1/1（共 2）'), findsOneWidget);
-    expect(find.text('已筛选 1/2 张预览图片'), findsOneWidget);
   });
 }
 

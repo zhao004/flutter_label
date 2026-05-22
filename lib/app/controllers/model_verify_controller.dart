@@ -44,6 +44,7 @@ class ModelVerifyController extends GetxController {
   StreamSubscription<RealtimeDetectionResult>? _windowSubscription;
   Completer<void>? _windowCompletion;
   WindowSelectionInfo? _highlightedWindow;
+  bool _stopRequested = false;
 
   @override
   void onClose() {
@@ -130,6 +131,7 @@ class ModelVerifyController extends GetxController {
 
     isRunning.value = true;
     isStopping.value = false;
+    _stopRequested = false;
     errorMessage.value = null;
     imageResult.value = null;
     windowResult.value = null;
@@ -142,6 +144,10 @@ class ModelVerifyController extends GetxController {
         case ModelVerifyMode.image:
           verifyStage.value = '正在验证图片...';
           final result = await _modelVerifyService.verifyImage(_config());
+          if (_stopRequested) {
+            _markVerifyStopped();
+            return;
+          }
           imageResult.value = result;
           logs.addAll(result.logs);
           logs.add('图片验证完成，检测到 ${result.detections.length} 个目标。');
@@ -151,6 +157,10 @@ class ModelVerifyController extends GetxController {
           await _runWindowVerify();
       }
     } catch (error) {
+      if (_stopRequested) {
+        _markVerifyStopped();
+        return;
+      }
       errorMessage.value = error.toString();
       logs.add('模型验证失败：$error');
       AppToast.error(error, source: '模型验证');
@@ -159,15 +169,20 @@ class ModelVerifyController extends GetxController {
       isStopping.value = false;
       _windowSubscription = null;
       _windowCompletion = null;
+      _stopRequested = false;
     }
   }
 
   Future<void> stopVerify() async {
-    if (!isRunning.value || mode.value != ModelVerifyMode.window) {
+    if (!isRunning.value || isStopping.value) {
       return;
     }
+    _stopRequested = true;
     isStopping.value = true;
     verifyStage.value = '正在停止验证...';
+    if (mode.value != ModelVerifyMode.window) {
+      return;
+    }
     await _windowSubscription?.cancel();
     final windowCompletion = _windowCompletion;
     if (windowCompletion != null && !windowCompletion.isCompleted) {
@@ -267,10 +282,8 @@ class ModelVerifyController extends GetxController {
           },
         );
     await completion.future;
-    if (isStopping.value) {
-      verifyStage.value = ModelVerifyProgressStage.stopped.label;
-      logs.add('窗口验证已停止。');
-      AppToast.success('已停止窗口验证');
+    if (_stopRequested) {
+      _markVerifyStopped();
       return;
     }
     logs.add('窗口验证结束，共处理 $count 帧。');
@@ -294,6 +307,14 @@ class ModelVerifyController extends GetxController {
     processedFrames.value = 0;
     totalFrames.value = 0;
     currentFramePath.value = '';
+  }
+
+  void _markVerifyStopped() {
+    verifyStage.value = ModelVerifyProgressStage.stopped.label;
+    if (!logs.contains('模型验证已停止。')) {
+      logs.add('模型验证已停止。');
+    }
+    AppToast.success('已停止模型验证');
   }
 
   Future<void> _loadClassCountForSource(String path) async {

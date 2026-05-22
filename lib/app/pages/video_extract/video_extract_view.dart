@@ -131,40 +131,16 @@ class _SettingsPanel extends StatelessWidget {
           ),
           TaskActionArea(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: controller.isRunning.value
+              FilledButton.icon(
+                onPressed: controller.isRunning.value
+                    ? controller.isCancelRequested.value
                           ? null
-                          : () => unawaited(controller.startExtract()),
-                      icon: controller.isRunning.value
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.play_arrow),
-                      label: Text(
-                        controller.isRunning.value ? '抽帧中...' : '开始抽帧',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed:
-                          controller.isRunning.value &&
-                              !controller.isCancelRequested.value
-                          ? controller.stopExtract
-                          : null,
-                      icon: const Icon(Icons.stop_circle_outlined),
-                      label: Text(
-                        controller.isCancelRequested.value ? '停止中...' : '停止抽帧',
-                      ),
-                    ),
-                  ),
-                ],
+                          : controller.stopExtract
+                    : () => unawaited(controller.startExtract()),
+                icon: controller.isRunning.value
+                    ? const Icon(Icons.stop_circle_outlined)
+                    : const Icon(Icons.play_arrow),
+                label: Text(controller.isRunning.value ? '停止' : '开始抽帧'),
               ),
               OutlinedButton.icon(
                 onPressed: controller.generatedImages.isEmpty

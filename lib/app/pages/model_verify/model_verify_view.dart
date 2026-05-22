@@ -134,17 +134,15 @@ class _SettingsPanel extends StatelessWidget {
           TaskActionArea(
             children: [
               FilledButton.icon(
-                onPressed: controller.isRunning.value
+                onPressed: controller.isStopping.value
                     ? null
+                    : controller.isRunning.value
+                    ? () => unawaited(controller.stopVerify())
                     : () => unawaited(controller.runVerify()),
                 icon: controller.isRunning.value
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? const Icon(Icons.stop_circle_outlined)
                     : const Icon(Icons.play_arrow),
-                label: Text(controller.isRunning.value ? '验证中...' : '开始验证'),
+                label: Text(controller.isRunning.value ? '停止' : '开始验证'),
               ),
               if (controller.isRunning.value)
                 Column(
@@ -173,15 +171,6 @@ class _SettingsPanel extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                   ],
-                ),
-              if (controller.isRunning.value &&
-                  controller.mode.value == ModelVerifyMode.window)
-                OutlinedButton.icon(
-                  onPressed: controller.isStopping.value
-                      ? null
-                      : () => unawaited(controller.stopVerify()),
-                  icon: const Icon(Icons.stop_circle_outlined),
-                  label: Text(controller.isStopping.value ? '停止中...' : '停止验证'),
                 ),
               if (controller.mode.value == ModelVerifyMode.window)
                 const Text('窗口验证默认限制为 5 FPS，避免推理占满 CPU/GPU。'),

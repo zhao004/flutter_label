@@ -87,6 +87,24 @@ void main() {
 
     expect(find.text('helmet (#2) 93.4%'), findsOneWidget);
   });
+
+  testWidgets('模型验证运行时主按钮切换为停止', (tester) async {
+    setTestViewport(tester, const Size(1200, 900));
+    final controller = Get.find<ModelVerifyController>();
+    controller.isRunning.value = true;
+
+    await tester.pumpWidget(buildTestApp(home: const ModelVerifyView()));
+    await tester.pump();
+
+    expect(find.text('开始验证'), findsNothing);
+    expect(find.text('停止'), findsOneWidget);
+    expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
+
+    controller.isStopping.value = true;
+    await tester.pump();
+
+    expect(find.text('停止'), findsOneWidget);
+  });
 }
 
 Rect _paneCardRect(WidgetTester tester, Finder contentFinder) {

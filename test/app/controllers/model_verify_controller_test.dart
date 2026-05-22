@@ -93,6 +93,28 @@ void main() {
     expect(controller.windowResult.value?.frameWidth, 1);
     expect(controller.verifyStage.value, '已停止验证');
   });
+
+  test('图片验证停止后会忽略迟到结果并恢复运行状态', () async {
+    final service = _ImageStopModelVerifyService();
+    final controller = ModelVerifyController(modelVerifyService: service);
+    controller.modelPath.value = 'model.onnx';
+    controller.sourcePath.value = 'image.jpg';
+
+    final running = controller.runVerify();
+    await service.started.future;
+    await controller.stopVerify();
+
+    expect(controller.isStopping.value, isTrue);
+    service.complete();
+    await running;
+
+    expect(controller.isRunning.value, isFalse);
+    expect(controller.isStopping.value, isFalse);
+    expect(controller.imageResult.value, isNull);
+    expect(controller.errorMessage.value, isNull);
+    expect(controller.verifyStage.value, '已停止验证');
+    expect(controller.logs, contains('模型验证已停止。'));
+  });
 }
 
 class _WindowPickModelVerifyService extends ModelVerifyService {
@@ -171,5 +193,45 @@ class _WindowProgressModelVerifyService extends ModelVerifyService {
       },
     );
     return controller.stream;
+  }
+}
+
+class _ImageStopModelVerifyService extends ModelVerifyService {
+  final started = Completer<void>();
+  final _resultCompleter = Completer<ModelVerifyResult>();
+
+  @override
+  Future<ModelVerifyResult> verifyImage(ModelVerifyConfig config) async {
+    if (!started.isCompleted) {
+      started.complete();
+    }
+    return _resultCompleter.future;
+  }
+
+  void complete() {
+    if (_resultCompleter.isCompleted) {
+      return;
+    }
+    _resultCompleter.complete(
+      const ModelVerifyResult(
+        imagePath: 'image.jpg',
+        detections: [
+          DetectionResult(
+            classId: 0,
+            className: 'target',
+            confidence: 0.9,
+            left: 0,
+            top: 0,
+            width: 1,
+            height: 1,
+          ),
+        ],
+        inferMs: 1,
+        captureMs: 0,
+        fps: 0,
+        usedNative: true,
+        logs: ['图片验证完成'],
+      ),
+    );
   }
 }
