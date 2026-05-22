@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart' show OrderingMode, OrderingTerm;
+import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -112,6 +112,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.text('项目文件夹不存在'), findsOneWidget);
+    expect(find.text('缺失'), findsOneWidget);
     expect(find.byIcon(Icons.error_outline), findsOneWidget);
     final errorIcon = tester.widget<Icon>(find.byIcon(Icons.error_outline));
     expect(errorIcon.color, FluentDesignPalette.light.errorRed);
@@ -175,6 +176,7 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(find.text('今天'), findsWidgets);
     expect(find.text(longProjectPath), findsNothing);
     expect(find.text('快速打开'), findsNothing);
     expect(find.byIcon(Icons.open_in_new), findsOneWidget);
@@ -214,6 +216,33 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
   });
+
+  testWidgets('项目历史按日期分组展示', (tester) async {
+    setTestViewport(tester, const Size(1200, 900));
+    await database.addHistoryRecord(
+      actionType: HistoryActionType.openFeaturePage,
+      title: '今天记录',
+      targetRoute: Routes.videoExtract,
+    );
+    await database.addHistoryRecord(
+      actionType: HistoryActionType.openFeaturePage,
+      title: '昨天记录',
+      targetRoute: Routes.videoExtract,
+    );
+    await _shiftHistoryRecordDate(database, title: '昨天记录', daysAgo: 1);
+
+    await tester.pumpWidget(buildTestApp(home: const HomeView()));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('今天'), findsWidgets);
+    expect(find.text('昨天'), findsWidgets);
+    expect(find.text('1 条'), findsNWidgets(2));
+    expect(find.byIcon(Icons.explore_outlined), findsNWidgets(2));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 }
 
 String _missingProjectPath() {
@@ -226,15 +255,28 @@ String _missingProjectPath() {
 Future<List<HistoryRecord>> _readRecentHistory(AppDatabase database) {
   return (database.select(database.historyRecords)
         ..orderBy([
-          (record) => OrderingTerm(
+          (record) => drift.OrderingTerm(
             expression: record.createdAt,
-            mode: OrderingMode.desc,
+            mode: drift.OrderingMode.desc,
           ),
-          (record) =>
-              OrderingTerm(expression: record.id, mode: OrderingMode.desc),
+          (record) => drift.OrderingTerm(
+            expression: record.id,
+            mode: drift.OrderingMode.desc,
+          ),
         ])
         ..limit(10))
       .get();
+}
+
+Future<void> _shiftHistoryRecordDate(
+  AppDatabase database, {
+  required String title,
+  required int daysAgo,
+}) async {
+  final shiftedDate = DateTime.now().subtract(Duration(days: daysAgo));
+  await (database.update(database.historyRecords)
+        ..where((record) => record.title.equals(title)))
+      .write(HistoryRecordsCompanion(createdAt: drift.Value(shiftedDate)));
 }
 
 Finder _historyRecordActionLabelFinder(int recordId) {
