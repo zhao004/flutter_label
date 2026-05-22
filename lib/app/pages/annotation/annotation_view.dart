@@ -170,31 +170,25 @@ class _AnnotationViewState extends State<AnnotationView> {
 
     return [
       _AppBarInkBoundary(
-        child: OutlinedButton.icon(
+        child: FilledButton.tonalIcon(
           onPressed: () => unawaited(_showImportDialog(context)),
           icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
           label: const Text('导入图片'),
         ),
       ),
       _AppBarInkBoundary(
         child: Obx(
-          () => IconButton(
-            tooltip: '撤销 Ctrl+Z',
-            onPressed: _annotationController.canUndo.value
-                ? _annotationController.undo
-                : null,
-            icon: const Icon(Icons.undo),
-          ),
-        ),
-      ),
-      _AppBarInkBoundary(
-        child: Obx(
-          () => IconButton(
-            tooltip: '重做 Ctrl+Y',
-            onPressed: _annotationController.canRedo.value
-                ? _annotationController.redo
-                : null,
-            icon: const Icon(Icons.redo),
+          () => _UndoRedoButtonGroup(
+            canUndo: _annotationController.canUndo.value,
+            canRedo: _annotationController.canRedo.value,
+            onUndo: _annotationController.undo,
+            onRedo: _annotationController.redo,
           ),
         ),
       ),
@@ -204,6 +198,12 @@ class _AnnotationViewState extends State<AnnotationView> {
             _annotationController.saveCurrent(showSuccessToast: true),
           ),
           icon: const Icon(Icons.save, size: 18),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
           label: const Text('保存'),
         ),
       ),
@@ -495,6 +495,71 @@ class _BackToHomeButton extends StatelessWidget {
   }
 }
 
+class _UndoRedoButtonGroup extends StatelessWidget {
+  const _UndoRedoButtonGroup({
+    required this.canUndo,
+    required this.canRedo,
+    required this.onUndo,
+    required this.onRedo,
+  });
+
+  final bool canUndo;
+  final bool canRedo;
+  final VoidCallback onUndo;
+  final VoidCallback onRedo;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: FluentDesignTokens.fieldBackground,
+        border: Border.all(color: FluentDesignTokens.fieldBorder),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _CompactToolbarButton(
+            tooltip: '撤销 Ctrl+Z',
+            icon: Icons.undo,
+            onPressed: canUndo ? onUndo : null,
+          ),
+          Container(width: 1, height: 20, color: FluentDesignTokens.border),
+          _CompactToolbarButton(
+            tooltip: '重做 Ctrl+Y',
+            icon: Icons.redo,
+            onPressed: canRedo ? onRedo : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactToolbarButton extends StatelessWidget {
+  const _CompactToolbarButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
 /// 为 AppBar 操作提供独立的透明 Material，避免响应式重建后旧水波纹继续引用已卸载按钮。
 class _AppBarInkBoundary extends StatelessWidget {
   const _AppBarInkBoundary({required this.child});
@@ -647,12 +712,34 @@ class _CollapsedImageListPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       bottom: false,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: IconButton(
-          tooltip: '展开左侧面板',
-          onPressed: onExpand,
-          icon: const Icon(Icons.chevron_right),
+      child: InkWell(
+        onTap: onExpand,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            children: [
+              IconButton(
+                tooltip: '展开左侧面板',
+                onPressed: onExpand,
+                icon: const Icon(Icons.chevron_right),
+              ),
+              const SizedBox(height: 12),
+              const Icon(Icons.view_list_outlined, size: 20),
+              const SizedBox(height: 10),
+              const RotatedBox(
+                quarterTurns: 1,
+                child: Text(
+                  '图片列表',
+                  style: TextStyle(
+                    color: FluentDesignTokens.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -679,6 +766,8 @@ class _ExpandedToolsPanel extends StatelessWidget {
           child: Row(
             children: [
               const SizedBox(width: 12),
+              const Icon(Icons.build_outlined, size: 18),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   '工具面板',
@@ -693,7 +782,7 @@ class _ExpandedToolsPanel extends StatelessWidget {
             ],
           ),
         ),
-        const Divider(height: 1),
+        const Divider(height: 1, color: FluentDesignTokens.border),
         Expanded(
           child: _ToolsPanel(
             classController: classController,
@@ -714,12 +803,34 @@ class _CollapsedToolsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       bottom: false,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: IconButton(
-          tooltip: '展开右侧面板',
-          onPressed: onExpand,
-          icon: const Icon(Icons.chevron_left),
+      child: InkWell(
+        onTap: onExpand,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            children: [
+              IconButton(
+                tooltip: '展开右侧面板',
+                onPressed: onExpand,
+                icon: const Icon(Icons.chevron_left),
+              ),
+              const SizedBox(height: 12),
+              const Icon(Icons.tune, size: 20),
+              const SizedBox(height: 10),
+              const RotatedBox(
+                quarterTurns: 1,
+                child: Text(
+                  '工具面板',
+                  style: TextStyle(
+                    color: FluentDesignTokens.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -861,37 +972,80 @@ class _EmptyAnnotationState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Center(
-      child: Card(
-        elevation: 0,
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.72),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              FluentDesignTokens.canvasBackground.withValues(alpha: 0.92),
+              const Color(0xFF151515).withValues(alpha: 0.92),
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.28),
+              blurRadius: 30,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.fromLTRB(34, 32, 34, 30),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.image_not_supported_outlined,
-                size: 52,
-                color: colorScheme.onSurfaceVariant,
+              Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.10),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.add_photo_alternate_outlined,
+                  size: 42,
+                  color: Colors.white,
+                ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                '当前数据集还没有图片',
-                style: Theme.of(context).textTheme.titleMedium,
+              const SizedBox(height: 18),
+              const Text(
+                '开始你的第一张标注',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
-                '可先导入图片，也可以在右侧类别面板新增类别后再开始标注。',
+                '请在左侧选择图片，或导入新图片后开始绘制标注框。类别可在右侧工具面板维护。',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.72),
+                  height: 1.45,
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: onImport,
                 icon: const Icon(Icons.add_photo_alternate_outlined),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 22,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 label: const Text('导入图片'),
               ),
             ],
@@ -931,13 +1085,23 @@ class _StatusBar extends StatelessWidget {
       final zoomText =
           '${(annotationController.zoom * 100).toStringAsFixed(0)}%';
       final imageText = image?.relativePath ?? '未加载图片';
-      final details = [
-        '进度 $index/$total',
-        image == null ? '尺寸 -' : image.dimensionText,
-        '框 ${annotationController.boxes.length}',
-        '缩放 $zoomText',
-        dirtyText,
-        completed ? '已完成' : '未完成',
+      final items = [
+        _StatusItem(
+          icon: Icons.collections_outlined,
+          label: '进度',
+          value: '$index/$total',
+        ),
+        _StatusItem(
+          icon: Icons.photo_size_select_large_outlined,
+          label: '尺寸',
+          value: image == null ? '-' : image.dimensionText,
+        ),
+        _StatusItem(
+          icon: Icons.select_all_outlined,
+          label: '框',
+          value: '${annotationController.boxes.length}',
+        ),
+        _StatusItem(icon: Icons.zoom_in_outlined, label: '缩放', value: zoomText),
       ];
 
       return LayoutBuilder(
@@ -951,10 +1115,17 @@ class _StatusBar extends StatelessWidget {
               border: Border(top: BorderSide(color: FluentDesignTokens.border)),
             ),
             child: isCompact
-                ? _CompactStatusContent(imageText: imageText, details: details)
+                ? _CompactStatusContent(
+                    imageText: imageText,
+                    items: items,
+                    dirtyText: dirtyText,
+                    completed: completed,
+                  )
                 : _DesktopStatusContent(
                     imageText: imageText,
-                    details: details,
+                    items: items,
+                    dirtyText: dirtyText,
+                    completed: completed,
                     itemGap: _itemGap,
                   ),
           );
@@ -967,12 +1138,16 @@ class _StatusBar extends StatelessWidget {
 class _DesktopStatusContent extends StatelessWidget {
   const _DesktopStatusContent({
     required this.imageText,
-    required this.details,
+    required this.items,
+    required this.dirtyText,
+    required this.completed,
     required this.itemGap,
   });
 
   final String imageText;
-  final List<String> details;
+  final List<_StatusItem> items;
+  final String dirtyText;
+  final bool completed;
   final double itemGap;
 
   @override
@@ -980,20 +1155,31 @@ class _DesktopStatusContent extends StatelessWidget {
     return Row(
       children: [
         Expanded(child: Text(imageText, overflow: TextOverflow.ellipsis)),
-        for (var index = 0; index < details.length; index += 1) ...[
-          Text(details[index]),
-          if (index < details.length - 1) SizedBox(width: itemGap),
+        for (var index = 0; index < items.length; index += 1) ...[
+          _StatusChip(item: items[index]),
+          if (index < items.length - 1) SizedBox(width: itemGap),
         ],
+        SizedBox(width: itemGap),
+        _SaveStatusChip(text: dirtyText, dirty: dirtyText == '未保存'),
+        const SizedBox(width: 8),
+        _CompletionStatusChip(completed: completed),
       ],
     );
   }
 }
 
 class _CompactStatusContent extends StatelessWidget {
-  const _CompactStatusContent({required this.imageText, required this.details});
+  const _CompactStatusContent({
+    required this.imageText,
+    required this.items,
+    required this.dirtyText,
+    required this.completed,
+  });
 
   final String imageText;
-  final List<String> details;
+  final List<_StatusItem> items;
+  final String dirtyText;
+  final bool completed;
 
   @override
   Widget build(BuildContext context) {
@@ -1007,14 +1193,142 @@ class _CompactStatusContent extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              for (var index = 0; index < details.length; index += 1) ...[
-                Text(details[index]),
-                if (index < details.length - 1) const SizedBox(width: 12),
+              for (final item in items) ...[
+                _StatusChip(item: item),
+                const SizedBox(width: 8),
               ],
+              _SaveStatusChip(text: dirtyText, dirty: dirtyText == '未保存'),
+              const SizedBox(width: 8),
+              _CompletionStatusChip(completed: completed),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _StatusItem {
+  const _StatusItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.item});
+
+  final _StatusItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 24,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: FluentDesignTokens.fieldBackground,
+        border: Border.all(color: FluentDesignTokens.border),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(item.icon, size: 13, color: FluentDesignTokens.textSecondary),
+          const SizedBox(width: 5),
+          Text(
+            '${item.label} ${item.value}',
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SaveStatusChip extends StatelessWidget {
+  const _SaveStatusChip({required this.text, required this.dirty});
+
+  final String text;
+  final bool dirty;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = dirty
+        ? const Color(0xFFFF8C00)
+        : FluentDesignTokens.successGreen;
+    return Container(
+      height: 24,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        border: Border.all(color: color.withValues(alpha: 0.32)),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompletionStatusChip extends StatelessWidget {
+  const _CompletionStatusChip({required this.completed});
+
+  final bool completed;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = completed
+        ? FluentDesignTokens.successGreen
+        : FluentDesignTokens.textSecondary;
+    return Container(
+      height: 24,
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: completed ? 0.10 : 0.06),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            completed ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            completed ? '已完成' : '未完成',
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: completed ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
