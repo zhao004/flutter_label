@@ -102,9 +102,10 @@ class TaskSettingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final description = this.description;
+    final palette = FluentDesignTokens.of(context);
     return FluentCard(
-      color: FluentDesignTokens.fieldBackground,
-      borderColor: FluentDesignTokens.fieldBorder,
+      color: palette.fieldBackground,
+      borderColor: palette.fieldBorder,
       radius: FluentDesignTokens.controlRadius,
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -115,10 +116,7 @@ class TaskSettingsSection extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               description,
-              style: const TextStyle(
-                color: FluentDesignTokens.textSecondary,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: palette.textSecondary, fontSize: 13),
             ),
           ],
           if (children.isNotEmpty) ...[
@@ -141,8 +139,9 @@ class TaskActionArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return FluentCard(
-      color: FluentDesignTokens.cardBackground,
+      color: palette.cardBackground,
       borderColor: FluentDesignTokens.primaryBlue.withValues(alpha: 0.18),
       radius: FluentDesignTokens.controlRadius,
       padding: const EdgeInsets.all(14),
@@ -169,6 +168,7 @@ class TaskLogPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -176,7 +176,7 @@ class TaskLogPanel extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Text(title, style: Theme.of(context).textTheme.titleMedium),
         ),
-        const Divider(height: 1, color: FluentDesignTokens.border),
+        Divider(height: 1, color: palette.border),
         Expanded(
           child: logs.isEmpty
               ? _TaskLogEmpty(message: emptyMessage)
@@ -200,22 +200,23 @@ class TaskResultCard extends StatelessWidget {
     required this.title,
     required this.message,
     this.icon = Icons.fact_check_outlined,
-    this.color = FluentDesignTokens.fieldBackground,
-    this.borderColor = FluentDesignTokens.fieldBorder,
+    this.color,
+    this.borderColor,
     super.key,
   });
 
   final String title;
   final String message;
   final IconData icon;
-  final Color color;
-  final Color borderColor;
+  final Color? color;
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return FluentCard(
-      color: color,
-      borderColor: borderColor,
+      color: color ?? palette.fieldBackground,
+      borderColor: borderColor ?? palette.fieldBorder,
       radius: FluentDesignTokens.controlRadius,
       padding: const EdgeInsets.all(14),
       child: Row(
@@ -234,10 +235,7 @@ class TaskResultCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   message,
-                  style: const TextStyle(
-                    color: FluentDesignTokens.textSecondary,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: palette.textSecondary, fontSize: 13),
                 ),
               ],
             ),
@@ -255,20 +253,14 @@ class _TaskLogEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.article_outlined,
-            size: 40,
-            color: FluentDesignTokens.textSecondary,
-          ),
+          Icon(Icons.article_outlined, size: 40, color: palette.textSecondary),
           const SizedBox(height: 10),
-          Text(
-            message,
-            style: const TextStyle(color: FluentDesignTokens.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: palette.textSecondary)),
         ],
       ),
     );

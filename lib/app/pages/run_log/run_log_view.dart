@@ -12,9 +12,10 @@ class RunLogView extends GetView<RunLogController> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return FluentAppShell(
       child: ColoredBox(
-        color: FluentDesignTokens.appBackground,
+        color: palette.appBackground,
         child: ListView(
           padding: FluentDesignTokens.pagePadding,
           children: [
@@ -47,7 +48,7 @@ class RunLogView extends GetView<RunLogController> {
                       ),
                     ),
                   ),
-                  const Divider(height: 1, color: FluentDesignTokens.border),
+                  Divider(height: 1, color: palette.border),
                   StreamBuilder<List<RunLogRecord>>(
                     stream: controller.logsStream,
                     initialData: const <RunLogRecord>[],
@@ -99,15 +100,12 @@ class _RunLogTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final details = record.details;
+    final palette = FluentDesignTokens.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: warning
-            ? FluentDesignTokens.warningBackground
-            : FluentDesignTokens.fieldBackground,
+        color: warning ? palette.warningBackground : palette.fieldBackground,
         border: Border.all(
-          color: warning
-              ? FluentDesignTokens.warningBorder
-              : FluentDesignTokens.fieldBorder,
+          color: warning ? palette.warningBorder : palette.fieldBorder,
         ),
         borderRadius: BorderRadius.circular(8),
       ),
@@ -121,9 +119,7 @@ class _RunLogTile extends StatelessWidget {
                 Icon(
                   Icons.error_outline,
                   size: 18,
-                  color: warning
-                      ? FluentDesignTokens.warningText
-                      : FluentDesignTokens.errorRed,
+                  color: warning ? palette.warningText : palette.errorRed,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -134,10 +130,7 @@ class _RunLogTile extends StatelessWidget {
                 ),
                 Text(
                   _formatRunLogTime(record.createdAt),
-                  style: const TextStyle(
-                    color: FluentDesignTokens.textSecondary,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: palette.textSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -147,7 +140,7 @@ class _RunLogTile extends StatelessWidget {
               const SizedBox(height: 8),
               SelectableText(
                 details,
-                style: const TextStyle(color: FluentDesignTokens.textSecondary),
+                style: TextStyle(color: palette.textSecondary),
               ),
             ],
           ],
@@ -165,17 +158,15 @@ class _RunLogMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return Padding(
       padding: const EdgeInsets.all(48),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 48, color: FluentDesignTokens.textSecondary),
+          Icon(icon, size: 48, color: palette.textSecondary),
           const SizedBox(height: 12),
-          Text(
-            message,
-            style: const TextStyle(color: FluentDesignTokens.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: palette.textSecondary)),
         ],
       ),
     );

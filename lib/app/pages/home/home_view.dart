@@ -12,9 +12,10 @@ class HomeView extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return FluentAppShell(
       child: ColoredBox(
-        color: FluentDesignTokens.appBackground,
+        color: palette.appBackground,
         child: ListView(
           padding: FluentDesignTokens.pagePadding,
           children: [
@@ -63,8 +64,10 @@ class _ProjectEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return FluentCard(
       padding: const EdgeInsets.all(20),
+      hoverable: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -73,30 +76,24 @@ class _ProjectEntryCard extends StatelessWidget {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             '选择包含 data.yaml 的项目根目录，读取类别并进入图片标注；也可以新建空项目目录。',
-            style: TextStyle(
-              color: FluentDesignTokens.textSecondary,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: palette.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 12),
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
-              color: FluentDesignTokens.fieldBackground,
+              color: palette.fieldBackground,
               border: Border.fromBorderSide(
-                BorderSide(color: FluentDesignTokens.fieldBorder),
+                BorderSide(color: palette.fieldBorder),
               ),
-              borderRadius: BorderRadius.all(Radius.circular(6)),
+              borderRadius: const BorderRadius.all(Radius.circular(6)),
             ),
             child: Padding(
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               child: Text(
                 '也可以新建数据集项目，自动生成 images/labels/train/val/test 目录。',
-                style: TextStyle(
-                  color: FluentDesignTokens.textSecondary,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: palette.textSecondary, fontSize: 13),
               ),
             ),
           ),
@@ -156,6 +153,7 @@ class _HistoryPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return FluentCard(
       padding: const EdgeInsets.all(20),
+      hoverable: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -226,11 +224,14 @@ class _HistoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final description = record.description;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: FluentDesignTokens.fieldBackground,
-        borderRadius: BorderRadius.circular(8),
-      ),
+    final palette = FluentDesignTokens.of(context);
+    return FluentCard(
+      padding: EdgeInsets.zero,
+      color: palette.fieldBackground,
+      borderColor: palette.fieldBorder.withValues(alpha: 0.52),
+      radius: 8,
+      hoverable: true,
+      blurSigma: 8,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
@@ -239,10 +240,7 @@ class _HistoryTile extends StatelessWidget {
               width: 46,
               child: Text(
                 _formatHistoryTime(record.createdAt),
-                style: const TextStyle(
-                  color: FluentDesignTokens.textSecondary,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: palette.textSecondary, fontSize: 12),
               ),
             ),
             const SizedBox(width: 10),
@@ -259,10 +257,7 @@ class _HistoryTile extends StatelessWidget {
             const SizedBox(width: 10),
             Text(
               record.actionType.label,
-              style: const TextStyle(
-                color: FluentDesignTokens.textSecondary,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: palette.textSecondary, fontSize: 12),
             ),
           ],
         ),
@@ -279,17 +274,15 @@ class _HistoryMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 48),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 40, color: FluentDesignTokens.textSecondary),
+          Icon(icon, size: 40, color: palette.textSecondary),
           const SizedBox(height: 12),
-          Text(
-            message,
-            style: const TextStyle(color: FluentDesignTokens.textSecondary),
-          ),
+          Text(message, style: TextStyle(color: palette.textSecondary)),
         ],
       ),
     );

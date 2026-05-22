@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_label/app/pages/settings/settings_view.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -26,7 +26,7 @@ void main() {
     expect(find.textContaining('开启后，空格'), findsAtLeastNWidgets(1));
     expect(controller.spaceCompletesAndSelectsNext.value, isFalse);
 
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(find.byType(ToggleSwitch));
     await tester.pumpAndSettle();
 
     expect(controller.spaceCompletesAndSelectsNext.value, isTrue);

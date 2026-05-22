@@ -26,7 +26,7 @@ class ResponsiveToolPane {
   final double? width;
 }
 
-/// 将工具页统一到 Pencil 设计稿的标题区、白色参数卡和深色预览卡布局。
+/// 将工具页统一为标题区、参数卡和预览卡布局，并让面板随窗口高度伸缩。
 class ResponsiveToolScaffold extends StatelessWidget {
   const ResponsiveToolScaffold({
     required this.title,
@@ -41,32 +41,85 @@ class ResponsiveToolScaffold extends StatelessWidget {
   final List<ResponsiveToolPane> panes;
   final double breakpoint;
 
+  static const double _minimumPaneHeight = 420;
+  static const double _pageHeaderMinHeight = 78;
+  static const double _stackedPaneGap = 14;
+
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return FluentAppShell(
       child: ColoredBox(
-        color: FluentDesignTokens.appBackground,
+        color: palette.appBackground,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final useStackedLayout = constraints.maxWidth < breakpoint;
-            return ListView(
-              padding: FluentDesignTokens.pagePadding,
-              children: [
-                FluentPageHeader(
-                  title: title,
-                  description: description ?? _defaultDescription(title),
+            if (useStackedLayout) {
+              return _buildScrollablePage(
+                _StackedToolLayout(
+                  panes: panes,
+                  paneHeight: _stackedPaneHeightFor(constraints),
                 ),
-                const SizedBox(height: FluentDesignTokens.pageGap),
-                if (useStackedLayout)
-                  _StackedToolLayout(panes: panes)
-                else
-                  _DesktopToolLayout(panes: panes),
-              ],
+              );
+            }
+
+            if (!constraints.hasBoundedHeight) {
+              return _buildScrollablePage(
+                SizedBox(
+                  height: _minimumPaneHeight,
+                  child: _DesktopToolLayout(panes: panes),
+                ),
+              );
+            }
+
+            return Padding(
+              padding: FluentDesignTokens.pagePadding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: FluentDesignTokens.pageGap),
+                  Expanded(child: _DesktopToolLayout(panes: panes)),
+                ],
+              ),
             );
           },
         ),
       ),
     );
+  }
+
+  Widget _buildScrollablePage(Widget body) {
+    return ListView(
+      padding: FluentDesignTokens.pagePadding,
+      children: [
+        _buildHeader(),
+        const SizedBox(height: FluentDesignTokens.pageGap),
+        body,
+      ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return FluentPageHeader(
+      title: title,
+      description: description ?? _defaultDescription(title),
+    );
+  }
+
+  double _stackedPaneHeightFor(BoxConstraints constraints) {
+    if (!constraints.hasBoundedHeight || !constraints.maxHeight.isFinite) {
+      return _minimumPaneHeight;
+    }
+
+    final availableHeight =
+        constraints.maxHeight -
+        FluentDesignTokens.pagePadding.vertical -
+        _pageHeaderMinHeight -
+        FluentDesignTokens.pageGap;
+    return availableHeight > _minimumPaneHeight
+        ? availableHeight
+        : _minimumPaneHeight;
   }
 
   String _defaultDescription(String title) {
@@ -88,21 +141,13 @@ class _DesktopToolLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: 420,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var index = 0; index < panes.length; index += 1) ...[
-                _DesktopPane(pane: panes[index], index: index),
-                if (index < panes.length - 1) const SizedBox(width: 16),
-              ],
-            ],
-          ),
-        ),
+        for (var index = 0; index < panes.length; index += 1) ...[
+          _DesktopPane(pane: panes[index], index: index),
+          if (index < panes.length - 1) const SizedBox(width: 16),
+        ],
       ],
     );
   }
@@ -126,10 +171,10 @@ class _DesktopPane extends StatelessWidget {
 }
 
 class _StackedToolLayout extends StatelessWidget {
-  const _StackedToolLayout({required this.panes});
+  const _StackedToolLayout({required this.panes, required this.paneHeight});
 
   final List<ResponsiveToolPane> panes;
-  static const double _paneHeight = 420;
+  final double paneHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -138,10 +183,11 @@ class _StackedToolLayout extends StatelessWidget {
       children: [
         for (var index = 0; index < panes.length; index += 1) ...[
           SizedBox(
-            height: _paneHeight,
+            height: paneHeight,
             child: _ToolPaneCard(pane: panes[index], prominent: index > 0),
           ),
-          if (index < panes.length - 1) const SizedBox(height: 14),
+          if (index < panes.length - 1)
+            const SizedBox(height: ResponsiveToolScaffold._stackedPaneGap),
         ],
       ],
     );
@@ -156,9 +202,11 @@ class _ToolPaneCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     return FluentCard(
       padding: EdgeInsets.zero,
-      color: prominent ? FluentDesignTokens.cardBackground : Colors.white,
+      color: prominent ? palette.cardBackground : palette.glassFill,
+      borderColor: palette.border,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -167,11 +215,7 @@ class _ToolPaneCard extends StatelessWidget {
             child: Row(
               children: [
                 if (pane.icon != null) ...[
-                  Icon(
-                    pane.icon,
-                    size: 18,
-                    color: FluentDesignTokens.textSecondary,
-                  ),
+                  Icon(pane.icon, size: 18, color: palette.textSecondary),
                   const SizedBox(width: 8),
                 ],
                 Text(
@@ -184,7 +228,7 @@ class _ToolPaneCard extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 1, color: FluentDesignTokens.border),
+          Divider(height: 1, color: palette.border),
           Expanded(child: pane.child),
         ],
       ),

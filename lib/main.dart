@@ -1,7 +1,7 @@
 import 'dart:io';
 
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
 import 'package:window_manager/window_manager.dart';
@@ -22,19 +22,88 @@ Future<void> main() async {
     Get.put<AppRunLogService>(const AppRunLogService(), permanent: true);
   }
   ensureAppSettingsController();
-  runApp(
-    ToastificationWrapper(
-      child: GetMaterialApp(
-        title: 'YOLO 标注工具',
-        debugShowCheckedModeBanner: false,
-        theme: FluentDesignTokens.materialTheme(),
-        defaultTransition: Transition.noTransition,
-        transitionDuration: Duration.zero,
-        initialRoute: AppPages.initial,
-        getPages: AppPages.routes,
-      ),
-    ),
+  runApp(ToastificationWrapper(child: const FluentLabelApp()));
+}
+
+class FluentLabelApp extends StatefulWidget {
+  const FluentLabelApp({super.key});
+
+  @override
+  State<FluentLabelApp> createState() => _FluentLabelAppState();
+}
+
+class _FluentLabelAppState extends State<FluentLabelApp> {
+  @override
+  void initState() {
+    super.initState();
+    _configureGetNavigation();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FluentApp(
+      title: 'YOLO 标注工具',
+      debugShowCheckedModeBanner: false,
+      theme: FluentDesignTokens.lightTheme(),
+      darkTheme: FluentDesignTokens.darkTheme(),
+      themeMode: ThemeMode.system,
+      navigatorKey: Get.key,
+      initialRoute: AppPages.initial,
+      onGenerateRoute: _generateGetRoute,
+      onGenerateInitialRoutes: (routeName) => [
+        _generateGetRoute(RouteSettings(name: routeName)),
+      ],
+      navigatorObservers: [GetObserver(null, Get.routing)],
+      builder: FluentDesignTokens.materialCompatibilityBuilder,
+    );
+  }
+}
+
+void _configureGetNavigation() {
+  Get.config(
+    defaultTransition: Transition.noTransition,
+    defaultDurationTransition: Duration.zero,
   );
+}
+
+Route<dynamic> _generateGetRoute(RouteSettings settings) {
+  final page = _findGetPage(settings.name);
+  return GetPageRoute<dynamic>(
+    settings: RouteSettings(name: page.name, arguments: settings.arguments),
+    page: page.page,
+    binding: page.binding,
+    bindings: page.bindings,
+    transition: page.transition,
+    transitionDuration: page.transitionDuration ?? Duration.zero,
+    curve: page.curve,
+    opaque: page.opaque,
+    fullscreenDialog: page.fullscreenDialog,
+    maintainState: page.maintainState,
+    popGesture: page.popGesture,
+    customTransition: page.customTransition,
+    middlewares: page.middlewares,
+  );
+}
+
+GetPage<dynamic> _findGetPage(String? rawRouteName) {
+  final routeName = _normalizeRouteName(rawRouteName);
+  for (final page in AppPages.routes) {
+    if (page.name == routeName) {
+      return page;
+    }
+  }
+  return AppPages.routes.firstWhere(
+    (page) => page.name == AppPages.initial,
+    orElse: () => AppPages.routes.first,
+  );
+}
+
+String _normalizeRouteName(String? rawRouteName) {
+  final routeName = rawRouteName?.trim();
+  if (routeName == null || routeName.isEmpty || routeName == '/') {
+    return AppPages.initial;
+  }
+  return Uri.tryParse(routeName)?.path ?? routeName;
 }
 
 Future<void> _configureDesktopWindow() async {

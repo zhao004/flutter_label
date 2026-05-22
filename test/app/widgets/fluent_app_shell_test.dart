@@ -50,4 +50,22 @@ void main() {
     expect(find.text('工作台'), findsOneWidget);
     expect(find.text('视频抽帧'), findsOneWidget);
   });
+
+  testWidgets('窄屏导航按钮可以打开最小化浮层', (tester) async {
+    setTestViewport(tester, const Size(390, 800));
+
+    await tester.pumpWidget(
+      buildTestApp(home: const FluentAppShell(child: SizedBox.shrink())),
+    );
+
+    expect(find.byTooltip('展开导航'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('工作台')).dx, lessThan(0));
+
+    await tester.tap(find.byTooltip('展开导航'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('工作台'), findsOneWidget);
+    expect(find.text('视频抽帧'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('工作台')).dx, greaterThanOrEqualTo(0));
+  });
 }
