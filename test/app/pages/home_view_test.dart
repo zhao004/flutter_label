@@ -60,7 +60,7 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  testWidgets('首页桌面布局左右卡片等高且历史区更宽', (tester) async {
+  testWidgets('首页宽屏仍保持上下排版', (tester) async {
     setTestViewport(tester, const Size(1280, 900));
 
     await tester.pumpWidget(buildTestApp(home: const HomeView()));
@@ -73,10 +73,10 @@ void main() {
       find.byKey(const ValueKey('history-panel-card')),
     );
 
-    expect(projectRect.top, historyRect.top);
-    expect(projectRect.bottom, historyRect.bottom);
-    expect(historyRect.width, greaterThan(projectRect.width));
-    expect(historyRect.width / projectRect.width, closeTo(1.5, 0.08));
+    expect(projectRect.top, lessThan(historyRect.top));
+    expect(historyRect.left, projectRect.left);
+    expect(historyRect.right, projectRect.right);
+    expect(historyRect.top - projectRect.bottom, 16);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);

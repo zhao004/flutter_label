@@ -8,9 +8,6 @@ import '../../widgets/fluent_app_shell.dart';
 import '../../widgets/fluent_card.dart';
 import 'home_controller.dart';
 
-const double _homeDesktopBreakpoint = 900;
-const double _desktopHomeCardHeight = 432;
-const double _historyListHeight = 360;
 const int _maxHistoryPathDisplayLength = 48;
 
 class HomeView extends GetView<HomeController> {
@@ -26,22 +23,19 @@ class HomeView extends GetView<HomeController> {
         child: ListView(
           padding: FluentDesignTokens.pagePadding,
           children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final useTwoColumns =
-                    constraints.maxWidth >= _homeDesktopBreakpoint;
-                if (!useTwoColumns) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _ProjectEntryCard(controller: controller),
-                      const SizedBox(height: 16),
-                      _HistoryPanel(controller: controller, shrinkWrap: true),
-                    ],
-                  );
-                }
-                return _DesktopHomeLayout(controller: controller);
-              },
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                KeyedSubtree(
+                  key: const ValueKey('project-entry-card'),
+                  child: _ProjectEntryCard(controller: controller),
+                ),
+                const SizedBox(height: 16),
+                KeyedSubtree(
+                  key: const ValueKey('history-panel-card'),
+                  child: _HistoryPanel(controller: controller),
+                ),
+              ],
             ),
           ],
         ),
@@ -50,50 +44,10 @@ class HomeView extends GetView<HomeController> {
   }
 }
 
-class _DesktopHomeLayout extends StatelessWidget {
-  const _DesktopHomeLayout({required this.controller});
-
-  final HomeController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: _desktopHomeCardHeight,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            flex: 2,
-            child: KeyedSubtree(
-              key: const ValueKey('project-entry-card'),
-              child: _ProjectEntryCard(
-                controller: controller,
-                pinActionsToBottom: true,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 3,
-            child: KeyedSubtree(
-              key: const ValueKey('history-panel-card'),
-              child: _HistoryPanel(controller: controller),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ProjectEntryCard extends StatelessWidget {
-  const _ProjectEntryCard({
-    required this.controller,
-    this.pinActionsToBottom = false,
-  });
+  const _ProjectEntryCard({required this.controller});
 
   final HomeController controller;
-  final bool pinActionsToBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +56,7 @@ class _ProjectEntryCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       hoverable: true,
       child: Column(
-        mainAxisSize: pinActionsToBottom ? MainAxisSize.max : MainAxisSize.min,
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
@@ -114,14 +68,8 @@ class _ProjectEntryCard extends StatelessWidget {
             '选择或新建包含 data.yaml 的 YOLO 数据集项目，进入图片标注并自动维护标准目录。',
             style: TextStyle(color: palette.textSecondary, fontSize: 13),
           ),
-          if (pinActionsToBottom)
-            const Spacer()
-          else
-            const SizedBox(height: 18),
-          _ProjectActionBar(
-            controller: controller,
-            expandButtons: pinActionsToBottom,
-          ),
+          const SizedBox(height: 18),
+          _ProjectActionBar(controller: controller),
         ],
       ),
     );
@@ -129,13 +77,9 @@ class _ProjectEntryCard extends StatelessWidget {
 }
 
 class _ProjectActionBar extends StatelessWidget {
-  const _ProjectActionBar({
-    required this.controller,
-    required this.expandButtons,
-  });
+  const _ProjectActionBar({required this.controller});
 
   final HomeController controller;
-  final bool expandButtons;
 
   @override
   Widget build(BuildContext context) {
@@ -170,15 +114,6 @@ class _ProjectActionBar extends StatelessWidget {
       ),
     );
 
-    if (expandButtons) {
-      return Row(
-        children: [
-          Expanded(child: openButton),
-          const SizedBox(width: 12),
-          Expanded(child: createButton),
-        ],
-      );
-    }
     return Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -188,10 +123,9 @@ class _ProjectActionBar extends StatelessWidget {
 }
 
 class _HistoryPanel extends StatelessWidget {
-  const _HistoryPanel({required this.controller, this.shrinkWrap = false});
+  const _HistoryPanel({required this.controller});
 
   final HomeController controller;
-  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context) {
@@ -237,10 +171,8 @@ class _HistoryPanel extends StatelessWidget {
               }
 
               final listView = ListView.separated(
-                shrinkWrap: shrinkWrap,
-                physics: shrinkWrap
-                    ? const NeverScrollableScrollPhysics()
-                    : const AlwaysScrollableScrollPhysics(),
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: records.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
@@ -250,11 +182,7 @@ class _HistoryPanel extends StatelessWidget {
                   );
                 },
               );
-
-              if (shrinkWrap) {
-                return listView;
-              }
-              return SizedBox(height: _historyListHeight, child: listView);
+              return listView;
             },
           ),
         ],
