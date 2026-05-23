@@ -243,6 +243,48 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
   });
+
+  testWidgets('项目历史悬浮时保持灰色背景', (tester) async {
+    setTestViewport(tester, const Size(1200, 900));
+    final projectDir = Directory.systemTemp.createTempSync(
+      'flutter_label_history_hover_',
+    );
+    addTearDown(() {
+      if (projectDir.existsSync()) {
+        projectDir.deleteSync(recursive: true);
+      }
+    });
+    final recordId = await database.addHistoryRecord(
+      actionType: HistoryActionType.openDatasetProject,
+      title: '测试数据集',
+      description: projectDir.path,
+      targetRoute: Routes.annotation,
+      payload: projectDir.path,
+    );
+
+    await tester.pumpWidget(buildTestApp(home: const HomeView()));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final tile = find.byKey(ValueKey('history-record-$recordId'));
+    final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await gesture.addPointer(location: tester.getCenter(tile));
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    final container = tester.widget<AnimatedContainer>(
+      _historyTileContainerFinder(recordId),
+    );
+    final decoration = container.decoration! as BoxDecoration;
+    expect(
+      decoration.color,
+      FluentDesignPalette.light.textPrimary.withValues(alpha: 0.06),
+    );
+
+    await gesture.removePointer();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 }
 
 String _missingProjectPath() {
@@ -283,5 +325,12 @@ Finder _historyRecordActionLabelFinder(int recordId) {
   return find.descendant(
     of: find.byKey(ValueKey('history-record-$recordId')),
     matching: find.text('打开数据集项目'),
+  );
+}
+
+Finder _historyTileContainerFinder(int recordId) {
+  return find.descendant(
+    of: find.byKey(ValueKey('history-record-$recordId')),
+    matching: find.byType(AnimatedContainer),
   );
 }

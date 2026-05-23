@@ -11,6 +11,7 @@ import 'home_controller.dart';
 
 const int _maxHistoryPathDisplayLength = 48;
 const double _historyActionIconSize = 38;
+const double _historyHoverOverlayAlpha = 0.06;
 
 class HomeView extends GetView<HomeController> {
   const HomeView({super.key});
@@ -359,6 +360,7 @@ class _HistoryTileState extends State<_HistoryTile> {
     final actionVisible = _hovered || isMissingProject;
 
     final tile = MouseRegion(
+      hitTestBehavior: HitTestBehavior.translucent,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       cursor: isProjectRecord
@@ -810,7 +812,7 @@ Color _historyTileBackground({
     return palette.errorRed.withValues(alpha: hovered ? 0.12 : 0.08);
   }
   return hovered
-      ? palette.cardHoverBackground.withValues(alpha: 0.82)
+      ? palette.textPrimary.withValues(alpha: _historyHoverOverlayAlpha)
       : Colors.transparent;
 }
 

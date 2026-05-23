@@ -7,7 +7,6 @@ import 'package:get/get.dart';
 import '../../controllers/video_extract_controller.dart';
 import '../../models/video_extract_config.dart';
 import '../../theme/fluent_design_tokens.dart';
-import '../../widgets/fluent_card.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
 import '../../widgets/task_controls.dart';
 
@@ -241,26 +240,20 @@ class _PreviewContent extends StatelessWidget {
     final path = imagePath;
     if (path == null || path.isEmpty) {
       return Center(
-        child: FluentCard(
-          color: palette.fieldBackground,
-          borderColor: palette.fieldBorder,
-          radius: 16,
-          padding: const EdgeInsets.fromLTRB(28, 26, 28, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.movie_filter_outlined,
-                size: 52,
-                color: palette.textSecondary,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '开始抽帧后将自动显示最新生成的图片',
-                style: TextStyle(color: palette.textSecondary),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.movie_filter_outlined,
+              size: 52,
+              color: palette.textSecondary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '开始抽帧后将自动显示最新生成的图片',
+              style: TextStyle(color: palette.textSecondary),
+            ),
+          ],
         ),
       );
     }

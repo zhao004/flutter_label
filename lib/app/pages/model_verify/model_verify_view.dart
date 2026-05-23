@@ -9,7 +9,6 @@ import '../../theme/fluent_design_tokens.dart';
 import '../../widgets/bbox_painter.dart';
 import '../../widgets/detection_overlay.dart';
 import '../../widgets/detection_preview.dart';
-import '../../widgets/fluent_card.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
 import '../../widgets/task_controls.dart';
 import '../../widgets/window_detection_preview.dart';
@@ -524,19 +523,13 @@ class _ModelVerifyEmpty extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = FluentDesignTokens.of(context);
     return Center(
-      child: FluentCard(
-        color: palette.fieldBackground,
-        borderColor: palette.fieldBorder,
-        radius: 16,
-        padding: const EdgeInsets.fromLTRB(26, 24, 26, 22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 44, color: palette.textSecondary),
-            const SizedBox(height: 12),
-            Text(message, style: TextStyle(color: palette.textSecondary)),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 44, color: palette.textSecondary),
+          const SizedBox(height: 12),
+          Text(message, style: TextStyle(color: palette.textSecondary)),
+        ],
       ),
     );
   }

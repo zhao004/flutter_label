@@ -9,7 +9,6 @@ import '../../models/auto_label_config.dart';
 import '../../models/dataset_split.dart';
 import '../../theme/fluent_design_tokens.dart';
 import '../../widgets/detection_preview.dart';
-import '../../widgets/fluent_card.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
 import '../../widgets/task_controls.dart';
 
@@ -335,26 +334,21 @@ class _AutoLabelPreviewEmpty extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = FluentDesignTokens.of(context);
     return Center(
-      child: FluentCard(
-        color: palette.fieldBackground,
-        borderColor: palette.fieldBorder,
-        radius: 16,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.image_search_outlined,
-              size: 56,
-              color: palette.textSecondary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '选择图片目录后显示样本预览',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: palette.textSecondary),
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.image_search_outlined,
+            size: 56,
+            color: palette.textSecondary,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '选择图片目录后显示样本预览',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: palette.textSecondary),
+          ),
+        ],
       ),
     );
   }

@@ -124,15 +124,12 @@ class TaskSettingsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final description = this.description;
     final palette = FluentDesignTokens.of(context);
-    return FluentCard(
-      color: palette.fieldBackground,
-      borderColor: palette.fieldBorder,
-      radius: FluentDesignTokens.controlRadius,
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          child: Row(
             children: [
               if (icon != null) ...[
                 Icon(icon, size: 18, color: palette.textSecondary),
@@ -146,19 +143,28 @@ class TaskSettingsSection extends StatelessWidget {
               ),
             ],
           ),
-          if (description != null && description.trim().isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
+        ),
+        if (description != null && description.trim().isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Text(
               description,
               style: TextStyle(color: palette.textSecondary, fontSize: 13),
             ),
-          ],
-          if (children.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            ..._spacedChildren(children, gap),
-          ],
+          ),
         ],
-      ),
+        if (children.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: _spacedChildren(children, gap),
+            ),
+          ),
+        ],
+        Divider(height: 20, thickness: 1, color: palette.border),
+      ],
     );
   }
 }
@@ -182,11 +188,13 @@ class TaskActionArea extends StatelessWidget {
     final accentColor = isRunning
         ? palette.warningText
         : FluentDesignTokens.primaryBlue;
-    return FluentCard(
-      color: palette.cardBackground,
-      borderColor: accentColor.withValues(alpha: isRunning ? 0.36 : 0.18),
-      radius: FluentDesignTokens.controlRadius,
-      padding: EdgeInsets.zero,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: accentColor.withValues(alpha: isRunning ? 0.36 : 0.18),
+        ),
+        borderRadius: BorderRadius.circular(FluentDesignTokens.controlRadius),
+      ),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -441,23 +449,17 @@ class _TaskLogEmpty extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = FluentDesignTokens.of(context);
     return Center(
-      child: FluentCard(
-        color: palette.fieldBackground,
-        borderColor: palette.fieldBorder,
-        radius: 16,
-        padding: const EdgeInsets.fromLTRB(26, 24, 26, 22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.article_outlined,
-              size: 44,
-              color: palette.textSecondary,
-            ),
-            const SizedBox(height: 12),
-            Text(message, style: TextStyle(color: palette.textSecondary)),
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.article_outlined,
+            size: 44,
+            color: palette.textSecondary,
+          ),
+          const SizedBox(height: 12),
+          Text(message, style: TextStyle(color: palette.textSecondary)),
+        ],
       ),
     );
   }
