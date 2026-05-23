@@ -1,12 +1,15 @@
 import 'dart:async';
 
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../controllers/auto_label_controller.dart';
 import '../../models/auto_label_config.dart';
 import '../../models/dataset_split.dart';
+import '../../theme/fluent_design_tokens.dart';
 import '../../widgets/detection_preview.dart';
+import '../../widgets/fluent_card.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
 import '../../widgets/task_controls.dart';
 
@@ -48,6 +51,7 @@ class _AutoLabelSettings extends StatelessWidget {
         children: [
           TaskSettingsSection(
             title: '输入输出',
+            icon: Icons.folder_open_outlined,
             children: [
               _PathField(
                 label: 'ONNX 模型',
@@ -89,6 +93,7 @@ class _AutoLabelSettings extends StatelessWidget {
           ),
           TaskSettingsSection(
             title: '推理参数',
+            icon: Icons.tune_outlined,
             description: '调整输入尺寸、置信度和 NMS 阈值后再开始批量写入标签。',
             children: [
               TextFormField(
@@ -150,6 +155,7 @@ class _AutoLabelSettings extends StatelessWidget {
             ],
           ),
           TaskActionArea(
+            isRunning: controller.isRunning.value,
             children: [
               FilledButton.icon(
                 onPressed: controller.isStopping.value
@@ -166,7 +172,7 @@ class _AutoLabelSettings extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    LinearProgressIndicator(
+                    fluent.ProgressBar(
                       value:
                           controller.processedCount.value /
                           controller.totalCount.value,
@@ -180,12 +186,20 @@ class _AutoLabelSettings extends StatelessWidget {
                         controller.currentImagePath.value,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Consolas',
+                          fontSize: 12,
+                        ),
                       ),
                   ],
                 ),
               if (controller.result.value != null)
-                Text(
-                  '写入 ${controller.result.value!.writtenCount}，合并 ${controller.result.value!.mergedCount}，跳过 ${controller.result.value!.skippedCount}',
+                TaskResultCard(
+                  title: '预标注结果',
+                  message:
+                      '写入 ${controller.result.value!.writtenCount}，合并 ${controller.result.value!.mergedCount}，跳过 ${controller.result.value!.skippedCount}',
+                  icon: Icons.auto_fix_high,
+                  success: true,
                 ),
             ],
           ),
@@ -227,6 +241,7 @@ class _AutoLabelPreviewPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      final palette = FluentDesignTokens.of(context);
       final previewImage = controller.activePreviewImage;
       final previewPath = controller.activePreviewImagePath;
       final currentIndex = controller.filteredPreviewImages.isEmpty
@@ -250,7 +265,11 @@ class _AutoLabelPreviewPanel extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                Text(countText),
+                TaskStatusChip(
+                  icon: Icons.image_outlined,
+                  label: '样本',
+                  value: countText,
+                ),
               ],
             ),
           ),
@@ -262,9 +281,7 @@ class _AutoLabelPreviewPanel extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest,
+                        color: palette.previewBackground,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Padding(
@@ -291,28 +308,16 @@ class _AutoLabelPreviewPanel extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed:
-                          controller.isRunning.value ||
-                              controller.selectedPreviewIndex.value == 0
-                          ? null
-                          : controller.selectPreviousPreview,
-                      icon: const Icon(Icons.chevron_left),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed:
-                          controller.isRunning.value ||
-                              controller.selectedPreviewIndex.value >=
-                                  controller.filteredPreviewImages.length - 1
-                          ? null
-                          : controller.selectNextPreview,
-                      icon: const Icon(Icons.chevron_right),
-                    ),
-                  ],
+                _PreviewNavigationButtonGroup(
+                  canPrevious:
+                      !controller.isRunning.value &&
+                      controller.selectedPreviewIndex.value > 0,
+                  canNext:
+                      !controller.isRunning.value &&
+                      controller.selectedPreviewIndex.value <
+                          controller.filteredPreviewImages.length - 1,
+                  onPrevious: controller.selectPreviousPreview,
+                  onNext: controller.selectNextPreview,
                 ),
               ],
             ),
@@ -328,27 +333,96 @@ class _AutoLabelPreviewEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final palette = FluentDesignTokens.of(context);
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: FluentCard(
+        color: palette.fieldBackground,
+        borderColor: palette.fieldBorder,
+        radius: 16,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.image_search_outlined,
               size: 56,
-              color: colorScheme.outline,
+              color: palette.textSecondary,
             ),
             const SizedBox(height: 12),
             Text(
               '选择图片目录后显示样本预览',
               textAlign: TextAlign.center,
-              style: TextStyle(color: colorScheme.onSurfaceVariant),
+              style: TextStyle(color: palette.textSecondary),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PreviewNavigationButtonGroup extends StatelessWidget {
+  const _PreviewNavigationButtonGroup({
+    required this.canPrevious,
+    required this.canNext,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final bool canPrevious;
+  final bool canNext;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
+    return Center(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: palette.fieldBackground,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _CompactPreviewButton(
+              tooltip: '上一张',
+              icon: Icons.chevron_left,
+              onPressed: canPrevious ? onPrevious : null,
+            ),
+            Container(width: 1, height: 20, color: palette.border),
+            _CompactPreviewButton(
+              tooltip: '下一张',
+              icon: Icons.chevron_right,
+              onPressed: canNext ? onNext : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactPreviewButton extends StatelessWidget {
+  const _CompactPreviewButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
     );
   }
 }

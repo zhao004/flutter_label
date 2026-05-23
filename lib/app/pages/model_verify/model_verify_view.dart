@@ -5,8 +5,11 @@ import 'package:get/get.dart';
 
 import '../../controllers/model_verify_controller.dart';
 import '../../models/model_verify_config.dart';
+import '../../theme/fluent_design_tokens.dart';
+import '../../widgets/bbox_painter.dart';
 import '../../widgets/detection_overlay.dart';
 import '../../widgets/detection_preview.dart';
+import '../../widgets/fluent_card.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
 import '../../widgets/task_controls.dart';
 import '../../widgets/window_detection_preview.dart';
@@ -56,6 +59,7 @@ class _SettingsPanel extends StatelessWidget {
         children: [
           TaskSettingsSection(
             title: '验证模式',
+            icon: Icons.visibility_outlined,
             children: [
               SegmentedButton<ModelVerifyMode>(
                 segments: const [
@@ -92,6 +96,7 @@ class _SettingsPanel extends StatelessWidget {
           ),
           TaskSettingsSection(
             title: '推理参数',
+            icon: Icons.tune_outlined,
             description: '图片和窗口验证共用这组阈值，运行中保持锁定。',
             children: [
               TextFormField(
@@ -132,6 +137,7 @@ class _SettingsPanel extends StatelessWidget {
             ],
           ),
           TaskActionArea(
+            isRunning: controller.isRunning.value,
             children: [
               FilledButton.icon(
                 onPressed: controller.isStopping.value
@@ -294,8 +300,12 @@ class _PreviewPanel extends StatelessWidget {
       }
       final imageResult = controller.imageResult.value;
       if (imageResult == null) {
-        return const Center(child: Text('运行验证后显示实时预览'));
+        return const _ModelVerifyEmpty(
+          icon: Icons.image_search_outlined,
+          message: '运行验证后显示实时预览',
+        );
       }
+      final palette = FluentDesignTokens.of(context);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -305,9 +315,21 @@ class _PreviewPanel extends StatelessWidget {
           ),
           const Divider(height: 1),
           Expanded(
-            child: DetectionPreview(
-              imagePath: imageResult.imagePath,
-              detections: imageResult.detections,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: palette.previewBackground,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: DetectionPreview(
+                    imagePath: imageResult.imagePath,
+                    detections: imageResult.detections,
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -318,7 +340,10 @@ class _PreviewPanel extends StatelessWidget {
   Widget _buildWindowPreview(BuildContext context) {
     final selectedWindow = controller.selectedWindow.value;
     if (selectedWindow == null) {
-      return const Center(child: Text('请拖动准星选择窗口后显示实时预览'));
+      return const _ModelVerifyEmpty(
+        icon: Icons.ads_click,
+        message: '请拖动准星选择窗口后显示实时预览',
+      );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -360,31 +385,160 @@ class _ResultPanel extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(
-              '检测结果（${detections.length}）',
-              style: Theme.of(context).textTheme.titleMedium,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '检测结果',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                TaskStatusChip(
+                  icon: Icons.radar_outlined,
+                  label: '目标',
+                  value: '${detections.length}',
+                ),
+              ],
             ),
           ),
           const Divider(height: 1),
           Expanded(
-            child: ListView.builder(
-              itemCount: detections.length,
-              itemBuilder: (context, index) {
-                final item = detections[index];
-                return ListTile(
-                  dense: true,
-                  title: Text(detectionLabelText(item)),
-                  subtitle: Text(
-                    'x=${item.left.toStringAsFixed(0)}, y=${item.top.toStringAsFixed(0)}, '
-                    'w=${item.width.toStringAsFixed(0)}, h=${item.height.toStringAsFixed(0)}',
+            child: detections.isEmpty
+                ? const _ModelVerifyEmpty(
+                    icon: Icons.fact_check_outlined,
+                    message: '暂无检测结果',
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: detections.length,
+                    itemBuilder: (context, index) {
+                      final item = detections[index];
+                      return _DetectionResultTile(
+                        label: detectionLabelText(item),
+                        classId: item.classId,
+                        confidence: item.confidence,
+                        coordinateText:
+                            'x=${item.left.toStringAsFixed(0)}, y=${item.top.toStringAsFixed(0)}, '
+                            'w=${item.width.toStringAsFixed(0)}, h=${item.height.toStringAsFixed(0)}',
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       );
     });
+  }
+}
+
+class _DetectionResultTile extends StatelessWidget {
+  const _DetectionResultTile({
+    required this.label,
+    required this.classId,
+    required this.confidence,
+    required this.coordinateText,
+  });
+
+  final String label;
+  final int classId;
+  final double confidence;
+  final String coordinateText;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
+    final classColor = BboxPainter.colorForClass(classId);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: palette.fieldBackground,
+          border: Border.all(color: palette.fieldBorder),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: classColor,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(10),
+                ),
+              ),
+              child: const SizedBox(width: 3, height: 58),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        Text(
+                          '${(confidence * 100).toStringAsFixed(0)}%',
+                          style: TextStyle(
+                            color: classColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      coordinateText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: palette.textSecondary,
+                        fontFamily: 'Consolas',
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModelVerifyEmpty extends StatelessWidget {
+  const _ModelVerifyEmpty({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
+    return Center(
+      child: FluentCard(
+        color: palette.fieldBackground,
+        borderColor: palette.fieldBorder,
+        radius: 16,
+        padding: const EdgeInsets.fromLTRB(26, 24, 26, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 44, color: palette.textSecondary),
+            const SizedBox(height: 12),
+            Text(message, style: TextStyle(color: palette.textSecondary)),
+          ],
+        ),
+      ),
+    );
   }
 }
 

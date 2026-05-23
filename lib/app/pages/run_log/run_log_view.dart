@@ -29,6 +29,12 @@ class RunLogView extends GetView<RunLogController> {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 20,
+                          color: palette.errorRed,
+                        ),
+                        const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
                             '错误记录',
@@ -38,14 +44,10 @@ class RunLogView extends GetView<RunLogController> {
                             ),
                           ),
                         ),
-                        SizedBox(
-                          width: 112,
-                          height: 40,
-                          child: OutlinedButton.icon(
-                            onPressed: controller.clearLogs,
-                            icon: const Icon(Icons.delete_outline, size: 18),
-                            label: const Text('清空'),
-                          ),
+                        IconButton(
+                          tooltip: '清空日志',
+                          onPressed: controller.clearLogs,
+                          icon: const Icon(Icons.delete_outline, size: 18),
                         ),
                       ],
                     ),
@@ -103,6 +105,7 @@ class _RunLogTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final details = record.details;
     final palette = FluentDesignTokens.of(context);
+    final accentColor = warning ? palette.warningText : palette.errorRed;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: warning ? palette.warningBackground : palette.fieldBackground,
@@ -111,40 +114,62 @@ class _RunLogTile extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 18,
-                  color: warning ? palette.warningText : palette.errorRed,
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: accentColor,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(8),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    record.source,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                Text(
-                  _formatRunLogTime(record.createdAt),
-                  style: TextStyle(color: palette.textSecondary, fontSize: 12),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            SelectableText(record.message),
-            if (details != null) ...[
-              const SizedBox(height: 8),
-              SelectableText(
-                details,
-                style: TextStyle(color: palette.textSecondary),
               ),
-            ],
+              child: const SizedBox(width: 3),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.error_outline, size: 18, color: accentColor),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            record.source,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        Text(
+                          _formatRunLogTime(record.createdAt),
+                          style: TextStyle(
+                            color: palette.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SelectableText(record.message),
+                    if (details != null) ...[
+                      const SizedBox(height: 8),
+                      SelectableText(
+                        details,
+                        style: TextStyle(
+                          color: palette.textSecondary,
+                          fontFamily: 'Consolas',
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -163,13 +188,21 @@ class _RunLogMessage extends StatelessWidget {
     final palette = FluentDesignTokens.of(context);
     return Padding(
       padding: const EdgeInsets.all(48),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 48, color: palette.textSecondary),
-          const SizedBox(height: 12),
-          Text(message, style: TextStyle(color: palette.textSecondary)),
-        ],
+      child: Center(
+        child: FluentCard(
+          color: palette.fieldBackground,
+          borderColor: palette.fieldBorder,
+          radius: 16,
+          padding: const EdgeInsets.fromLTRB(28, 26, 28, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 48, color: palette.textSecondary),
+              const SizedBox(height: 12),
+              Text(message, style: TextStyle(color: palette.textSecondary)),
+            ],
+          ),
+        ),
       ),
     );
   }

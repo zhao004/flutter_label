@@ -6,6 +6,8 @@ import 'package:get/get.dart';
 
 import '../../controllers/video_extract_controller.dart';
 import '../../models/video_extract_config.dart';
+import '../../theme/fluent_design_tokens.dart';
+import '../../widgets/fluent_card.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
 import '../../widgets/task_controls.dart';
 
@@ -47,6 +49,7 @@ class _SettingsPanel extends StatelessWidget {
         children: [
           TaskSettingsSection(
             title: '输入输出',
+            icon: Icons.folder_open_outlined,
             children: [
               _PathField(
                 label: '视频文件',
@@ -64,6 +67,7 @@ class _SettingsPanel extends StatelessWidget {
           ),
           TaskSettingsSection(
             title: '抽帧模式',
+            icon: Icons.speed_outlined,
             description: '根据视频内容选择固定帧率或固定间隔抽帧。',
             children: [
               SegmentedButton<VideoExtractMode>(
@@ -130,6 +134,7 @@ class _SettingsPanel extends StatelessWidget {
             ],
           ),
           TaskActionArea(
+            isRunning: controller.isRunning.value,
             children: [
               FilledButton.icon(
                 onPressed: controller.isRunning.value
@@ -202,9 +207,10 @@ class _PreviewPanel extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                Text(
-                  '${controller.generatedImages.length} 张',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                TaskStatusChip(
+                  icon: Icons.photo_library_outlined,
+                  label: '已生成',
+                  value: '${controller.generatedImages.length} 张',
                 ),
               ],
             ),
@@ -231,20 +237,30 @@ class _PreviewContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
     final path = imagePath;
     if (path == null || path.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.image_search_outlined,
-              size: 56,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 12),
-            const Text('开始抽帧后将自动显示最新生成的图片'),
-          ],
+        child: FluentCard(
+          color: palette.fieldBackground,
+          borderColor: palette.fieldBorder,
+          radius: 16,
+          padding: const EdgeInsets.fromLTRB(28, 26, 28, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.movie_filter_outlined,
+                size: 52,
+                color: palette.textSecondary,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '开始抽帧后将自动显示最新生成的图片',
+                style: TextStyle(color: palette.textSecondary),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -255,7 +271,7 @@ class _PreviewContent extends StatelessWidget {
         Expanded(
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: palette.previewBackground,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Padding(
@@ -272,7 +288,15 @@ class _PreviewContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        SelectableText(path, maxLines: 1),
+        SelectableText(
+          path,
+          maxLines: 1,
+          style: TextStyle(
+            color: palette.textSecondary,
+            fontFamily: 'Consolas',
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }

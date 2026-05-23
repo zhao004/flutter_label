@@ -46,6 +46,7 @@ class _SettingsPanel extends StatelessWidget {
         children: [
           TaskSettingsSection(
             title: '格式',
+            icon: Icons.swap_horiz,
             children: [
               DropdownButtonFormField<AnnotationFormat>(
                 initialValue: controller.inputFormat.value,
@@ -87,6 +88,7 @@ class _SettingsPanel extends StatelessWidget {
           ),
           TaskSettingsSection(
             title: '路径',
+            icon: Icons.folder_open_outlined,
             children: [
               _PathField(
                 label: '输入目录',
@@ -109,6 +111,7 @@ class _SettingsPanel extends StatelessWidget {
             ],
           ),
           TaskActionArea(
+            isRunning: controller.isRunning.value,
             children: [
               FilledButton.icon(
                 onPressed: controller.isRunning.value
@@ -129,6 +132,7 @@ class _SettingsPanel extends StatelessWidget {
                   message:
                       '成功 ${controller.result.value!.convertedCount}，跳过 ${controller.result.value!.skippedCount}',
                   icon: Icons.swap_horiz,
+                  success: true,
                 ),
             ],
           ),

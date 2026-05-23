@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../controllers/dataset_export_controller.dart';
+import '../../theme/fluent_design_tokens.dart';
 import '../../widgets/responsive_tool_scaffold.dart';
 import '../../widgets/task_controls.dart';
 
@@ -46,6 +47,7 @@ class _SettingsPanel extends StatelessWidget {
         children: [
           TaskSettingsSection(
             title: '路径',
+            icon: Icons.folder_open_outlined,
             children: [
               _PathField(
                 label: '项目目录',
@@ -63,40 +65,38 @@ class _SettingsPanel extends StatelessWidget {
           ),
           TaskSettingsSection(
             title: '划分比例（%）',
+            icon: Icons.pie_chart,
             description: '比例总和由控制器校验，窄宽度下自动纵向排列。',
             children: [_RatioFields(controller: controller)],
           ),
           TaskSettingsSection(
             title: '导出选项',
+            icon: Icons.checklist_outlined,
             children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('打乱图片顺序'),
+              _ExportOptionTile(
+                title: '打乱图片顺序',
                 value: controller.shuffle.value,
-                onChanged: controller.isRunning.value
-                    ? null
-                    : (value) => controller.shuffle.value = value,
+                enabled: !controller.isRunning.value,
+                onChanged: (value) => controller.shuffle.value = value,
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('复制空标签'),
-                subtitle: const Text('开启后缺失或空 txt 会导出为空标签文件'),
+              _ExportOptionTile(
+                title: '复制空标签',
+                subtitle: '开启后缺失或空 txt 会导出为空标签文件',
                 value: controller.includeEmptyLabels.value,
-                onChanged: controller.isRunning.value
-                    ? null
-                    : (value) => controller.includeEmptyLabels.value = value,
+                enabled: !controller.isRunning.value,
+                onChanged: (value) =>
+                    controller.includeEmptyLabels.value = value,
               ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('生成 zip'),
+              _ExportOptionTile(
+                title: '生成 zip',
                 value: controller.createZip.value,
-                onChanged: controller.isRunning.value
-                    ? null
-                    : (value) => controller.createZip.value = value,
+                enabled: !controller.isRunning.value,
+                onChanged: (value) => controller.createZip.value = value,
               ),
             ],
           ),
           TaskActionArea(
+            isRunning: controller.isRunning.value,
             children: [
               FilledButton.icon(
                 onPressed: controller.isRunning.value
@@ -117,10 +117,51 @@ class _SettingsPanel extends StatelessWidget {
                   message:
                       '已导出 ${controller.result.value!.exportedCount} 张，跳过 ${controller.result.value!.skippedCount} 张',
                   icon: Icons.archive_outlined,
+                  success: true,
                 ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ExportOptionTile extends StatelessWidget {
+  const _ExportOptionTile({
+    required this.title,
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+    this.subtitle,
+  });
+
+  final String title;
+  final String? subtitle;
+  final bool value;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = FluentDesignTokens.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.cardBackground.withValues(alpha: 0.42),
+        border: Border.all(color: palette.fieldBorder),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: SwitchListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        title: Text(title),
+        subtitle: subtitle == null
+            ? null
+            : Text(
+                subtitle!,
+                style: TextStyle(color: palette.textSecondary, fontSize: 12),
+              ),
+        value: value,
+        onChanged: enabled ? onChanged : null,
       ),
     );
   }
