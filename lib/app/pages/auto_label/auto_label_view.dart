@@ -52,13 +52,13 @@ class _AutoLabelSettings extends StatelessWidget {
             title: '输入输出',
             icon: Icons.folder_open_outlined,
             children: [
-              _PathField(
+              TaskPathField(
                 label: 'ONNX 模型',
                 value: controller.modelPath.value,
                 enabled: !controller.isRunning.value,
                 onPick: controller.pickModel,
               ),
-              _PathField(
+              TaskPathField(
                 label: '图片目录（可选择数据集根目录）',
                 value: controller.imageDir.value,
                 enabled: !controller.isRunning.value,
@@ -82,7 +82,7 @@ class _AutoLabelSettings extends StatelessWidget {
                         }
                       },
               ),
-              _PathField(
+              TaskPathField(
                 label: '标签输出目录',
                 value: controller.labelDir.value,
                 enabled: !controller.isRunning.value,
@@ -204,30 +204,6 @@ class _AutoLabelSettings extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PathField extends StatelessWidget {
-  const _PathField({
-    required this.label,
-    required this.value,
-    required this.enabled,
-    required this.onPick,
-  });
-
-  final String label;
-  final String value;
-  final bool enabled;
-  final Future<void> Function() onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    return TaskPathField(
-      label: label,
-      value: value,
-      enabled: enabled,
-      onPick: onPick,
     );
   }
 }

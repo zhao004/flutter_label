@@ -27,7 +27,13 @@ class FormatConvertView extends GetView<FormatConvertController> {
           title: '日志',
           icon: Icons.article_outlined,
           showHeader: false,
-          child: _LogPanel(controller: controller),
+          child: Obx(
+            () => TaskLogPanel(
+              title: '转换日志',
+              logs: controller.logs.toList(growable: false),
+              emptyMessage: '配置格式与目录后开始转换',
+            ),
+          ),
         ),
       ],
     );
@@ -90,19 +96,19 @@ class _SettingsPanel extends StatelessWidget {
             title: '路径',
             icon: Icons.folder_open_outlined,
             children: [
-              _PathField(
+              TaskPathField(
                 label: '输入目录',
                 value: controller.inputDir.value,
                 enabled: !controller.isRunning.value,
                 onPick: controller.pickInputDir,
               ),
-              _PathField(
+              TaskPathField(
                 label: '输出目录',
                 value: controller.outputDir.value,
                 enabled: !controller.isRunning.value,
                 onPick: controller.pickOutputDir,
               ),
-              _PathField(
+              TaskPathField(
                 label: 'data.yaml',
                 value: controller.dataYamlPath.value,
                 enabled: !controller.isRunning.value,
@@ -137,47 +143,6 @@ class _SettingsPanel extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PathField extends StatelessWidget {
-  const _PathField({
-    required this.label,
-    required this.value,
-    required this.enabled,
-    required this.onPick,
-  });
-
-  final String label;
-  final String value;
-  final bool enabled;
-  final Future<void> Function() onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    return TaskPathField(
-      label: label,
-      value: value,
-      enabled: enabled,
-      onPick: onPick,
-    );
-  }
-}
-
-class _LogPanel extends StatelessWidget {
-  const _LogPanel({required this.controller});
-
-  final FormatConvertController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(
-      () => TaskLogPanel(
-        title: '转换日志',
-        logs: controller.logs.toList(growable: false),
-        emptyMessage: '配置格式与目录后开始转换',
       ),
     );
   }

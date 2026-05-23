@@ -50,13 +50,13 @@ class _SettingsPanel extends StatelessWidget {
             title: '输入输出',
             icon: Icons.folder_open_outlined,
             children: [
-              _PathField(
+              TaskPathField(
                 label: '视频文件',
                 value: controller.videoPath.value,
                 enabled: !controller.isRunning.value,
                 onPick: controller.pickVideo,
               ),
-              _PathField(
+              TaskPathField(
                 label: '输出目录',
                 value: controller.outputDir.value,
                 enabled: !controller.isRunning.value,
@@ -157,30 +157,6 @@ class _SettingsPanel extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _PathField extends StatelessWidget {
-  const _PathField({
-    required this.label,
-    required this.value,
-    required this.enabled,
-    required this.onPick,
-  });
-
-  final String label;
-  final String value;
-  final bool enabled;
-  final Future<void> Function() onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    return TaskPathField(
-      label: label,
-      value: value,
-      enabled: enabled,
-      onPick: onPick,
     );
   }
 }

@@ -28,7 +28,13 @@ class DatasetExportView extends GetView<DatasetExportController> {
           title: '日志',
           icon: Icons.article_outlined,
           showHeader: false,
-          child: _LogPanel(controller: controller),
+          child: Obx(
+            () => TaskLogPanel(
+              title: '导出日志',
+              logs: controller.logs.toList(growable: false),
+              emptyMessage: '配置项目和导出目录后开始导出',
+            ),
+          ),
         ),
       ],
     );
@@ -49,13 +55,13 @@ class _SettingsPanel extends StatelessWidget {
             title: '路径',
             icon: Icons.folder_open_outlined,
             children: [
-              _PathField(
+              TaskPathField(
                 label: '项目目录',
                 value: controller.projectDir.value,
                 enabled: !controller.isRunning.value,
                 onPick: controller.pickProjectDir,
               ),
-              _PathField(
+              TaskPathField(
                 label: '导出目录',
                 value: controller.outputDir.value,
                 enabled: !controller.isRunning.value,
@@ -167,30 +173,6 @@ class _ExportOptionTile extends StatelessWidget {
   }
 }
 
-class _PathField extends StatelessWidget {
-  const _PathField({
-    required this.label,
-    required this.value,
-    required this.enabled,
-    required this.onPick,
-  });
-
-  final String label;
-  final String value;
-  final bool enabled;
-  final Future<void> Function() onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    return TaskPathField(
-      label: label,
-      value: value,
-      enabled: enabled,
-      onPick: onPick,
-    );
-  }
-}
-
 class _RatioField extends StatelessWidget {
   const _RatioField({
     required this.label,
@@ -271,23 +253,6 @@ class _RatioFields extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _LogPanel extends StatelessWidget {
-  const _LogPanel({required this.controller});
-
-  final DatasetExportController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Obx(
-      () => TaskLogPanel(
-        title: '导出日志',
-        logs: controller.logs.toList(growable: false),
-        emptyMessage: '配置项目和导出目录后开始导出',
-      ),
     );
   }
 }

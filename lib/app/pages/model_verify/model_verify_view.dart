@@ -76,7 +76,7 @@ class _SettingsPanel extends StatelessWidget {
                     ? null
                     : (values) => controller.setMode(values.first),
               ),
-              _PathField(
+              TaskPathField(
                 label: 'ONNX 模型',
                 value: controller.modelPath.value,
                 enabled: !controller.isRunning.value,
@@ -85,7 +85,7 @@ class _SettingsPanel extends StatelessWidget {
               if (controller.mode.value == ModelVerifyMode.window)
                 _WindowPicker(controller: controller)
               else
-                _PathField(
+                TaskPathField(
                   label: '图片文件',
                   value: controller.sourcePath.value,
                   enabled: !controller.isRunning.value,
@@ -531,30 +531,6 @@ class _ModelVerifyEmpty extends StatelessWidget {
           Text(message, style: TextStyle(color: palette.textSecondary)),
         ],
       ),
-    );
-  }
-}
-
-class _PathField extends StatelessWidget {
-  const _PathField({
-    required this.label,
-    required this.value,
-    required this.onPick,
-    this.enabled = true,
-  });
-
-  final String label;
-  final String value;
-  final Future<void> Function() onPick;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return TaskPathField(
-      label: label,
-      value: value,
-      enabled: enabled,
-      onPick: onPick,
     );
   }
 }

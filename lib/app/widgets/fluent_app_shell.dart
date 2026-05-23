@@ -35,7 +35,7 @@ class FluentNavigationShellController extends GetxController {
   }
 }
 
-FluentNavigationShellController ensureFluentNavigationShellController() {
+FluentNavigationShellController _ensureFluentNavigationShellController() {
   if (Get.isRegistered<FluentNavigationShellController>()) {
     return Get.find<FluentNavigationShellController>();
   }
@@ -133,7 +133,7 @@ class _FluentAppShellState extends State<FluentAppShell> {
   @override
   void initState() {
     super.initState();
-    _navigationShellController = ensureFluentNavigationShellController();
+    _navigationShellController = _ensureFluentNavigationShellController();
   }
 
   @override
