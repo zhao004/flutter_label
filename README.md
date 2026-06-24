@@ -6,6 +6,10 @@
 项目的模型推理与视频抽帧能力通过 Dart FFI 调用 C++ 动态库 `native_core` 完成；`native_core` 负责链接 ONNX
 Runtime、FFmpeg，并在 Windows 上提供窗口选择与窗口画面捕获能力。
 
+## 项目预览
+
+![flutter_label 项目工作台预览](assets/images/20260624-201803.png)
+
 ## 主要功能
 
 - 数据集项目管理：新建或打开标准 YOLO 数据集项目，维护 `data.yaml` 和内部缓存 `project.json`。
